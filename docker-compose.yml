@@ -1,0 +1,58 @@
+# Runs the same image that ships to production (see Dockerfile) against
+# local Postgres/Redis, for smoke-testing a build — not a hot-reloading
+# dev environment. `bin/rails server` outside Docker remains the fast
+# inner dev loop.
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: securityreview
+      POSTGRES_PASSWORD: securityreview
+      POSTGRES_DB: securityreview_development
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U securityreview"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  web:
+    build: .
+    env_file: .env
+    environment:
+      RAILS_ENV: development
+    ports:
+      - "3000:3000"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  sidekiq:
+    build: .
+    env_file: .env
+    environment:
+      RAILS_ENV: development
+    command: ["bundle", "exec", "sidekiq", "-C", "config/sidekiq.yml"]
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+volumes:
+  db_data:

@@ -1,0 +1,28 @@
+# Only /api/* and /healthz and /admin (session-auth'd) are exposed at all —
+# there is no separate "internal-only" service in this manifest set that
+# needs hiding, because Admin::BaseController itself enforces
+# authentication/authorization; the ingress is not relied on as the only
+# access control layer, only as TLS termination + routing.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: security-review-web
+  namespace: security-review
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: "25m" # bounds request body size (uploads go straight to S3, not through this app)
+spec:
+  tls:
+    - hosts: ["app.example.com"]
+      secretName: security-review-tls
+  rules:
+    - host: app.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: security-review-web
+                port:
+                  number: 80

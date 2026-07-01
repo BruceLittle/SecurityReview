@@ -1,0 +1,62 @@
+# Default-deny, then explicitly allow only what each workload needs.
+# Neither deployment can reach anything else in the cluster or the
+# internet except what's opened up below.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-all
+  namespace: security-review
+spec:
+  podSelector: {}
+  policyTypes: ["Ingress", "Egress"]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: web-allow
+  namespace: security-review
+spec:
+  podSelector:
+    matchLabels:
+      app: security-review-web
+  policyTypes: ["Ingress", "Egress"]
+  ingress:
+    - from:
+        - namespaceSelector: {} # ingress controller; tighten to its specific namespace label in a real cluster
+      ports:
+        - port: 3000
+  egress:
+    - to: [] # Postgres/Redis (in-cluster) and AWS/vendor APIs (internet, via egress gateway) — scope this to specific CIDRs/namespaces per environment
+      ports:
+        - port: 5432
+        - port: 6379
+        - port: 443
+    - to:
+        - namespaceSelector: {}
+          podSelector: {}
+      ports:
+        - port: 53
+          protocol: UDP
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: sidekiq-allow
+  namespace: security-review
+spec:
+  podSelector:
+    matchLabels:
+      app: security-review-sidekiq
+  policyTypes: ["Egress"]
+  egress:
+    - to: []
+      ports:
+        - port: 5432
+        - port: 6379
+        - port: 443
+    - to:
+        - namespaceSelector: {}
+          podSelector: {}
+      ports:
+        - port: 53
+          protocol: UDP

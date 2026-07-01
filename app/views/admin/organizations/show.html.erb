@@ -1,0 +1,17 @@
+<h1><%= @organization.name %></h1>
+<p>Slug: <%= @organization.slug %></p>
+<p>Status: <%= @organization.status %></p>
+
+<h2>Users</h2>
+<ul>
+  <% @organization.users.each do |user| %>
+    <li><%= link_to user.email, admin_user_path(user) %> (<%= user.role %>)</li>
+  <% end %>
+</ul>
+
+<h2>API tokens</h2>
+<ul>
+  <% @organization.api_tokens.each do |token| %>
+    <li><%= token.name %> — <%= token.revoked? ? "revoked" : "active until #{token.expires_at}" %></li>
+  <% end %>
+</ul>

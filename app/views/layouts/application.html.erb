@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>SecurityReview Admin</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <%= csrf_meta_tags %>
+    <%= csp_meta_tag %>
+  </head>
+  <body>
+    <header>
+      <% if user_signed_in? %>
+        Signed in as <%= current_user.email %>
+        (<%= current_user.platform_admin? ? "platform admin" : current_user.role %>)
+        <%= button_to "Sign out", destroy_user_session_path, method: :delete %>
+      <% end %>
+    </header>
+    <% if notice %><p class="notice"><%= notice %></p><% end %>
+    <% if alert %><p class="alert"><%= alert %></p><% end %>
+    <main>
+      <%= yield %>
+    </main>
+  </body>
+</html>

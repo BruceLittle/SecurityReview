@@ -1,0 +1,26 @@
+<%= form_with model: user, url: url, local: true do |f| %>
+  <% if user.errors.any? %>
+    <ul>
+      <% user.errors.full_messages.each { |m| %><li><%= m %></li><% } %>
+    </ul>
+  <% end %>
+
+  <div>
+    <%= f.label :email %>
+    <%= f.email_field :email %>
+  </div>
+  <div>
+    <%= f.label :password %>
+    <%= f.password_field :password %>
+  </div>
+  <div>
+    <%= f.label :password_confirmation %>
+    <%= f.password_field :password_confirmation %>
+  </div>
+  <div>
+    <%= f.label :role %>
+    <%= f.select :role, User::ROLES %>
+  </div>
+
+  <%= f.submit %>
+<% end %>

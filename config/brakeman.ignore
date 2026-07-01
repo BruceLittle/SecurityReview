@@ -1,0 +1,26 @@
+{
+  "ignored_warnings": [
+    {
+      "warning_type": "Mass Assignment",
+      "warning_code": 105,
+      "fingerprint": "5d5dfd71d41575c94dd4d3557e59d44e2fa2422c996a000aa3f3f5a319dd944d",
+      "check_name": "PermitAttributes",
+      "message": "Potentially dangerous key allowed for mass assignment",
+      "file": "app/controllers/admin/users_controller.rb",
+      "line": 75,
+      "link": "https://brakemanscanner.org/docs/warning_types/mass_assignment/",
+      "code": "params.require(:user).permit(:email, :password, :password_confirmation, :role)",
+      "render_path": null,
+      "location": {
+        "type": "method",
+        "class": "Admin::UsersController",
+        "method": "user_params"
+      },
+      "user_input": ":role",
+      "confidence": "Medium",
+      "note": "Reviewed: intentional. `role` only toggles between \"member\" and \"org_admin\" within the caller's own organization — UserPolicy#create?/#update? restrict this action to a platform_admin or an org_admin acting on a user in their own org, and scoped_organization_id pins organization_id server-side regardless of params. The privilege-escalation-relevant field, platform_admin, is never in this permit list and is only ever set explicitly by the controller, never from params. An org_admin promoting a teammate to org_admin within their own tenant is an intended self-service capability, not a gap."
+    }
+  ],
+  "updated": "2026-07-01 14:50:00 +0000",
+  "brakeman_version": "6.2.2"
+}

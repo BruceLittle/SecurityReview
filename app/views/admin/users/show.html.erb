@@ -1,0 +1,5 @@
+<h1><%= @user.email %></h1>
+<p>Organization: <%= @user.organization&.name || "—" %></p>
+<p>Role: <%= @user.platform_admin? ? "platform admin" : @user.role %></p>
+<%= link_to "Edit", edit_admin_user_path(@user) %>
+<%= button_to "Remove", admin_user_path(@user), method: :delete, data: { turbo_confirm: "Remove this user?" } %>

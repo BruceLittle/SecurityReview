@@ -1,0 +1,70 @@
+plugins:
+  - rubocop-rails
+
+AllCops:
+  NewCops: enable
+  TargetRubyVersion: 3.3
+  Exclude:
+    - "db/schema.rb"
+    - "bin/*"
+    - "terraform/**/*"
+    - "k8s/**/*"
+
+Style/Documentation:
+  Enabled: false
+
+Style/StringLiterals:
+  EnforcedStyle: double_quotes
+
+Style/FrozenStringLiteralComment:
+  Enabled: false
+
+Metrics/BlockLength:
+  Exclude:
+    - "spec/**/*"
+    - "config/**/*"
+
+Metrics/MethodLength:
+  Max: 20
+  Exclude:
+    - "db/migrate/*.rb"
+
+# Specs intentionally backdate timestamps past what a normal update! would
+# accept (e.g. an expires_at validated to be in the future) to set up
+# expiration/revocation scenarios — the point of those tests is what
+# happens on read, not re-exercising write-side validation.
+Rails/SkipsModelValidations:
+  Exclude:
+    - "spec/**/*.rb"
+
+Layout/LineLength:
+  Max: 130
+
+Metrics/ParameterLists:
+  Max: 6 # AuditLog.record!'s six named kwargs read clearer than a options hash
+
+Metrics/CyclomaticComplexity:
+  Max: 8 # WebhookUrlGuard#safe? — one guard clause per SSRF check, each independently testable
+
+Metrics/AbcSize:
+  Max: 22 # a few security-critical methods (auth, webhook delivery) read clearer as one linear sequence of checks than split further
+  Exclude:
+    - "db/migrate/*.rb"
+
+# Single-locale internal admin console — not worth i18n infrastructure for
+# a handful of flash/error strings in this app.
+Rails/I18nLocaleTexts:
+  Enabled: false
+
+# db/seeds.rb is run interactively by a developer; printing what it did is
+# the intended UX, not debug output left behind.
+Rails/Output:
+  Exclude:
+    - "db/seeds.rb"
+
+# Rack::Attack ships as `class Rack::Attack` (compact style) in the gem;
+# reopening it any other way would require `module Rack` instead of
+# `class Rack`, since Rack itself is a module, not a class.
+Style/ClassAndModuleChildren:
+  Exclude:
+    - "config/initializers/rack_attack.rb"

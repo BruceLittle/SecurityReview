@@ -1,0 +1,10 @@
+:concurrency: 5
+:queues:
+  - default
+  - attachments
+  - webhooks
+
+:schedule:
+  audit_log_retention:
+    cron: "0 3 * * *"
+    class: AuditLogRetentionJob

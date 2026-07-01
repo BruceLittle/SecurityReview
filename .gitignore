@@ -1,0 +1,29 @@
+/.bundle
+/log/*
+/tmp/*
+!/log/.keep
+!/tmp/.keep
+/db/*.sqlite3
+/db/*.sqlite3-journal
+/public/assets
+/public/packs
+/public/packs-test
+/node_modules
+/yarn-error.log
+/coverage/
+
+# Secrets — never committed. Populate a local copy from .env.example.
+# .env.test is the exception: it holds only fixed, non-secret placeholder
+# values (fake AWS keys, etc.) needed for the test suite / CI to boot
+# without hitting any real external service.
+.env
+.env.*
+!.env.example
+!.env.test
+/config/master.key
+/config/credentials/*.key
+
+*.pem
+*.p12
+.DS_Store
+dump.rdb

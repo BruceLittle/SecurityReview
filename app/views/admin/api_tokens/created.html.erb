@@ -1,0 +1,7 @@
+<h1>Token issued</h1>
+<p><strong>Copy this token now — it will not be shown again.</strong></p>
+<pre><%= @plaintext_token %></pre>
+<p>Name: <%= @api_token.name %></p>
+<p>Organization: <%= @api_token.organization.name %></p>
+<p>Expires: <%= @api_token.expires_at %></p>
+<%= link_to "Back to tokens", admin_api_tokens_path %>

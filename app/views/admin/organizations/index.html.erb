@@ -1,0 +1,13 @@
+<h1>Organizations</h1>
+<table>
+  <thead><tr><th>Name</th><th>Slug</th><th>Status</th></tr></thead>
+  <tbody>
+    <% @organizations.each do |organization| %>
+      <tr>
+        <td><%= link_to organization.name, admin_organization_path(organization) %></td>
+        <td><%= organization.slug %></td>
+        <td><%= organization.status %></td>
+      </tr>
+    <% end %>
+  </tbody>
+</table>

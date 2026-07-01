@@ -1,0 +1,19 @@
+default: &default
+  adapter: postgresql
+  encoding: unicode
+  pool: <%= ENV.fetch("RAILS_MAX_THREADS", 5) %>
+  url: <%= ENV["DATABASE_URL"] %>
+
+development:
+  <<: *default
+  database: securityreview_development
+
+test:
+  <<: *default
+  database: securityreview_test
+
+# Production connects exclusively via DATABASE_URL, which is injected by the
+# platform's secret manager at deploy time (see terraform/rds.tf and
+# k8s/secret.yaml.example). No credentials live in this file.
+production:
+  <<: *default

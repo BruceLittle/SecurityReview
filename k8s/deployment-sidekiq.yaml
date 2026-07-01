@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: security-review-sidekiq
+  namespace: security-review
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: security-review-sidekiq
+  template:
+    metadata:
+      labels:
+        app: security-review-sidekiq
+    spec:
+      serviceAccountName: security-review-app
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: sidekiq
+          image: security-review-web:latest
+          command: ["bin/sidekiq"]
+          envFrom:
+            - configMapRef:
+                name: security-review-config
+            - secretRef:
+                name: security-review-secrets
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: tmp
+              mountPath: /app/tmp
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "512Mi"
+            limits:
+              cpu: "1"
+              memory: "1Gi"
+      volumes:
+        - name: tmp
+          emptyDir: {}

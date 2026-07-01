@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: security-review-web
+  namespace: security-review
+spec:
+  selector:
+    app: security-review-web
+  ports:
+    - port: 80
+      targetPort: 3000
+  type: ClusterIP

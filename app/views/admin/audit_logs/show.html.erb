@@ -1,0 +1,8 @@
+<h1>Audit log entry #<%= @audit_log.id %></h1>
+<p>When: <%= @audit_log.created_at %></p>
+<p>Action: <%= @audit_log.action %></p>
+<p>Actor: <%= @audit_log.actor_type %>#<%= @audit_log.actor_id %></p>
+<p>Organization: <%= @audit_log.organization&.name || "—" %></p>
+<p>Object: <%= [@audit_log.auditable_type, @audit_log.auditable_id].compact.join("#") %></p>
+<p>IP: <%= @audit_log.ip_address %></p>
+<p>Metadata: <code><%= @audit_log.metadata.to_json %></code></p>

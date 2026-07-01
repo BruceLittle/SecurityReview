@@ -1,0 +1,16 @@
+<h1>Audit log</h1>
+<table>
+  <thead><tr><th>When</th><th>Action</th><th>Actor</th><th>Organization</th><th>Object</th><th>IP</th></tr></thead>
+  <tbody>
+    <% @audit_logs.each do |entry| %>
+      <tr>
+        <td><%= link_to entry.created_at, admin_audit_log_path(entry) %></td>
+        <td><%= entry.action %></td>
+        <td><%= entry.actor_type %>#<%= entry.actor_id %></td>
+        <td><%= entry.organization&.name || "—" %></td>
+        <td><%= [entry.auditable_type, entry.auditable_id].compact.join("#") %></td>
+        <td><%= entry.ip_address %></td>
+      </tr>
+    <% end %>
+  </tbody>
+</table>

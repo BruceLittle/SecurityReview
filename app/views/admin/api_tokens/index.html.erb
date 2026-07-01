@@ -1,0 +1,20 @@
+<h1>API tokens</h1>
+<%= link_to "Issue new token", new_admin_api_token_path %>
+<table>
+  <thead><tr><th>Name</th><th>Organization</th><th>Expires</th><th>Status</th><th></th></tr></thead>
+  <tbody>
+    <% @api_tokens.each do |token| %>
+      <tr>
+        <td><%= token.name %></td>
+        <td><%= token.organization.name %></td>
+        <td><%= token.expires_at %></td>
+        <td><%= token.revoked? ? "revoked" : (token.expired? ? "expired" : "active") %></td>
+        <td>
+          <% unless token.revoked? %>
+            <%= button_to "Revoke", admin_api_token_path(token), method: :delete, data: { turbo_confirm: "Revoke this token? This cannot be undone." } %>
+          <% end %>
+        </td>
+      </tr>
+    <% end %>
+  </tbody>
+</table>

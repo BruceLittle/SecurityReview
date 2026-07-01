@@ -75,7 +75,11 @@ bin/sidekiq          # background jobs (attachment scanning, webhook delivery)
 bin/rails db:seed    # creates a platform admin + a demo org (dev only)
 ```
 
-Or via Docker: `docker compose up`.
+Or via Docker (copy the env file first — `docker compose` doesn't run `bin/setup` for you):
+```
+cp .env.example .env
+docker compose up
+```
 
 ## Tests / static analysis
 

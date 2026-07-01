@@ -29,11 +29,19 @@ services:
       timeout: 5s
       retries: 5
 
+  # DATABASE_URL/REDIS_URL are set here, not left to .env: inside these
+  # containers "db"/"redis" (the service names below) are the correct
+  # hostnames, not "localhost" — which is what .env.example holds for
+  # running `bin/rails server` directly on the host. An `environment:`
+  # entry overrides the same key from `env_file`, so this wins regardless
+  # of what's in the user's .env.
   web:
     build: .
     env_file: .env
     environment:
       RAILS_ENV: development
+      DATABASE_URL: postgres://securityreview:securityreview@db:5432/securityreview_development
+      REDIS_URL: redis://redis:6379/0
     ports:
       - "3000:3000"
     depends_on:
@@ -47,6 +55,8 @@ services:
     env_file: .env
     environment:
       RAILS_ENV: development
+      DATABASE_URL: postgres://securityreview:securityreview@db:5432/securityreview_development
+      REDIS_URL: redis://redis:6379/0
     command: ["bundle", "exec", "sidekiq", "-C", "config/sidekiq.yml"]
     depends_on:
       db:

@@ -9,6 +9,11 @@ AllCops:
     - "bin/*"
     - "terraform/**/*"
     - "k8s/**/*"
+    # CI installs gems into ./vendor/bundle (bundler-cache: true); without
+    # this, RuboCop walks into vendored gems' own .rubocop.yml files and
+    # can fail trying to load a require (e.g. rubocop-rspec) that isn't in
+    # our bundle at all.
+    - "vendor/**/*"
 
 Style/Documentation:
   Enabled: false

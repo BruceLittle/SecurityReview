@@ -4,17 +4,17 @@ ruby "3.3.6"
 
 gem "bootsnap", require: false
 gem "pg", "~> 1.5"
-gem "puma", "~> 6.4"
+gem "puma", "~> 8.0" # >= 8.0.2 fixes CVE-2026-47736 / CVE-2026-47737 (PROXY protocol memory exhaustion)
 gem "rails", "~> 8.0"
 
 # Auth
-gem "devise", "~> 4.9"       # session-based auth for the admin web panel
-gem "pundit", "~> 2.3"       # authorization policies, org-scoped
+gem "devise", "~> 5.0" # >= 5.0.4 fixes CVE-2026-32700 (email-confirm race) / CVE-2026-40295 (open redirect)
+gem "pundit", "~> 2.3" # authorization policies, org-scoped
 
 # Background jobs
 gem "redis", "~> 5.1" # backs both Sidekiq and the Rack::Attack throttle cache
 gem "sidekiq", "~> 7.2"
-gem "sidekiq-cron", "~> 1.12"
+gem "sidekiq-cron", "~> 2.4" # >= 2.4.0 fixes CVE-2025-67202 (XSS via crafted URL)
 # Pinned: connection_pool 3.x changed its keyword-arg signature in a way
 # that's incompatible with ActiveSupport 7.1's RedisCacheStore (raises
 # "wrong number of arguments" building the pool) — 2.4.x is the last line
@@ -28,7 +28,7 @@ gem "aws-sdk-s3", "~> 1.146"
 gem "bcrypt", "~> 3.1"           # Devise password hashing
 gem "rack-attack", "~> 6.7"      # rate limiting / throttling
 gem "rack-cors", "~> 2.0"        # explicit CORS allowlist
-gem "secure_headers", "~> 6.5"   # CSP + standard security headers
+gem "secure_headers", "~> 7.3"   # >= 7.3.0 fixes CVE-2026-54163 (CSP directive injection)
 
 # Serialization
 gem "jbuilder", "~> 2.12"

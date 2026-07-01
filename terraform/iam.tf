@@ -21,9 +21,9 @@ resource "aws_iam_role" "app_task_role" {
 
 data "aws_iam_policy_document" "app_s3_access" {
   statement {
-    sid     = "ListOwnBucketOnly"
-    effect  = "Allow"
-    actions = ["s3:ListBucket"]
+    sid       = "ListOwnBucketOnly"
+    effect    = "Allow"
+    actions   = ["s3:ListBucket"]
     resources = [aws_s3_bucket.attachments.arn]
   }
 

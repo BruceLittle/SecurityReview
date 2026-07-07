@@ -101,6 +101,12 @@ def answer_question(
         )
     except anthropic.APIConnectionError as e:
         return AnsweredQuestion(question=question, answer_text="", needs_review=True, error=str(e))
+    except Exception as e:
+        # Catches SDK-level configuration errors raised before any network call
+        # (e.g. missing credentials), which surface as a plain TypeError rather
+        # than an anthropic.* exception — a per-row failure should never crash
+        # the whole batch.
+        return AnsweredQuestion(question=question, answer_text="", needs_review=True, error=str(e))
 
     if response.stop_reason == "refusal":
         return AnsweredQuestion(

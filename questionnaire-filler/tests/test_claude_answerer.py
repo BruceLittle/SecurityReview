@@ -85,3 +85,22 @@ def test_answer_question_handles_refusal_stop_reason():
 
     assert result.needs_review is True
     assert "refusal" in result.error
+
+
+class FakeMessagesRaisesTypeError:
+    def create(self, **kwargs):
+        # Mirrors the real SDK: missing credentials surface as a plain TypeError
+        # raised while building the request, not an anthropic.* exception.
+        raise TypeError("Could not resolve authentication method.")
+
+
+class FakeClientMissingCredentials:
+    def __init__(self):
+        self.messages = FakeMessagesRaisesTypeError()
+
+
+def test_answer_question_does_not_crash_on_missing_credentials():
+    result = answer_question(FakeClientMissingCredentials(), "Some question", _sample_chunks())
+
+    assert result.needs_review is True
+    assert "authentication" in result.error.lower()

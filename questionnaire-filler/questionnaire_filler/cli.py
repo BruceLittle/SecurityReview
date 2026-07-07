@@ -72,6 +72,14 @@ def run(args: argparse.Namespace) -> int:
             client, question, top_chunks, model=args.model, effort=args.effort
         )
 
+        if result.error and ("credentials" in result.error.lower() or "authentication" in result.error.lower()):
+            print(
+                f"\nStopping: Claude API credentials are not configured ({result.error}).\n"
+                "Set ANTHROPIC_API_KEY (see .env.example) or run `ant auth login`, then retry.",
+                file=sys.stderr,
+            )
+            return 1
+
         df.at[idx, ANSWER_COLUMN] = result.answer_text if not result.error else f"ERROR: {result.error}"
         df.at[idx, SOURCES_COLUMN] = "; ".join(result.source_titles)
         df.at[idx, NEEDS_REVIEW_COLUMN] = "yes" if (result.needs_review or result.error) else ""

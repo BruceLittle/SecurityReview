@@ -1,0 +1,5 @@
+Question
+Is customer data encrypted at rest? What algorithm and key length is used?
+Do you require multi-factor authentication for access to production systems?
+What is your target response time for a critical (SEV1) security incident?
+Do you have a mobile application penetration testing program?

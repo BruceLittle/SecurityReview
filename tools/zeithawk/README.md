@@ -23,6 +23,10 @@ review/testing work against systems they're authorized to test.
 - **Comparer** — line-level diff between two blocks of text.
 - **History** — every request sent from Repeater or Intruder, stored in
   `localStorage`, click a row to reload it into Repeater.
+- **Recon** — DNS records (A/AAAA/MX/TXT/NS/CNAME/SOA) via DNS-over-HTTPS,
+  WHOIS/RDAP, and an HTTP-reachability check on common web ports for a
+  domain or IP — plus ready-to-copy `ping`/`traceroute`/`whois`/`nmap`
+  commands for the things a browser can't do (see below).
 
 ## Constraints (by design — it runs entirely client-side)
 
@@ -42,3 +46,29 @@ mitmproxy).
 
 **Authorized testing only.** Only point this at systems you own or have
 explicit permission to test.
+
+## Recon's limits (also by design)
+
+A browser has no API for raw sockets, so three of the things "recon a
+target" usually means are flatly impossible from client-side JS, not just
+inconvenient:
+
+- **ICMP ping** — needs a raw socket; there's no ping API in a browser.
+- **Traceroute** — needs to send packets with increasing TTL and read back
+  ICMP responses; same problem, no workaround.
+- **A real port scan** — needs raw TCP SYN/connect control across arbitrary
+  ports; a browser's `fetch()` can only ever make an HTTP request, and only
+  on ports the browser itself doesn't block outright.
+
+Recon's "HTTP reachability" table is a limited, honest substitute: it tries
+a plain HTTPS/HTTP request on a handful of common web ports and reports
+reachable/timeout/closed — useful signal, not a substitute for `nmap`.
+For the real thing, Recon prints ready-to-copy `ping`, `traceroute`,
+`whois`, and `nmap` commands to run in your own terminal, against targets
+you're authorized to test.
+
+DNS-over-HTTPS (`dns.google`) and RDAP (`rdap.org`, which bootstraps to the
+authoritative registry) are both public APIs with no key required. RDAP
+lookups can still fail if the target registry's own RDAP server doesn't
+send CORS headers for browser access — when that happens, Recon says so
+and points at the `whois` command instead.

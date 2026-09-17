@@ -263,6 +263,14 @@
   .hint{font-size:12px;color:var(--ink-soft);line-height:1.5;margin:0;}
   [hidden]{display:none!important;}
 
+  .whois-row{display:flex;justify-content:space-between;gap:12px;padding:6px 0;border-bottom:1px solid var(--line-soft);font-family:'IBM Plex Mono',monospace;font-size:12.5px;}
+  .whois-row:last-child{border-bottom:none;}
+  .whois-label{color:var(--ink-soft);flex:0 0 auto;}
+  .whois-value{color:var(--ink);text-align:right;word-break:break-word;}
+
+  .cmd-row{display:flex;justify-content:space-between;align-items:center;gap:12px;background:var(--paper);border:1px solid var(--line-soft);border-radius:8px;padding:8px 12px;}
+  .cmd-row code{background:none;padding:0;font-size:12.5px;}
+
   .footer-note{margin-top:36px;padding-top:18px;border-top:1px solid var(--line);color:var(--unknown);font-size:12px;font-family:'IBM Plex Mono',monospace;text-align:center;line-height:1.6;}
 </style>
 
@@ -501,6 +509,61 @@
       <div id="hist-list"></div>
     </section>
 
+    <!-- ============ RECON ============ -->
+    <section id="tool-recon" class="tool-section panel" hidden>
+      <div class="tool-heading">
+        <h2>Recon</h2>
+        <p>DNS records, nameservers, and WHOIS/RDAP run live here via public lookup APIs. Real ping, traceroute, and a full port scan need raw sockets a browser will never expose — copy the equivalent commands below and run them in your own terminal, against targets you're authorized to test.</p>
+      </div>
+      <div class="row method-url-row" style="margin-bottom:16px;">
+        <input id="recon-target" type="text" placeholder="example.com or 93.184.216.34" />
+        <button type="button" class="btn btn-primary" id="recon-run">Run recon</button>
+      </div>
+
+      <div class="stack">
+        <div class="subpanel">
+          <span class="field-label">Resolved</span>
+          <div id="recon-resolved" class="hint">Enter a target and run recon.</div>
+        </div>
+
+        <div class="subpanel">
+          <span class="field-label">DNS records</span>
+          <div class="results-wrap">
+            <table class="results" id="recon-dns-table">
+              <thead><tr><th>Type</th><th>Value</th><th>TTL</th></tr></thead>
+              <tbody id="recon-dns-tbody"><tr><td colspan="3" class="hint">—</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="subpanel">
+          <span class="field-label">Nameservers</span>
+          <div id="recon-ns" class="row wrap"><span class="hint">—</span></div>
+        </div>
+
+        <div class="subpanel">
+          <span class="field-label">WHOIS / RDAP</span>
+          <div id="recon-whois"><span class="hint">—</span></div>
+        </div>
+
+        <div class="subpanel">
+          <span class="field-label">HTTP reachability (common web ports — not a full port scan)</span>
+          <div class="results-wrap">
+            <table class="results" id="recon-ports-table">
+              <thead><tr><th>Port</th><th>Scheme</th><th>Result</th><th>Time</th></tr></thead>
+              <tbody id="recon-ports-tbody"><tr><td colspan="4" class="hint">—</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="subpanel">
+          <span class="field-label">Run locally (ping, traceroute, full port scan)</span>
+          <p class="hint" style="margin-bottom:10px;">These need raw sockets no browser exposes. Only probe systems you own or are explicitly authorized to test.</p>
+          <div id="recon-commands" class="stack"></div>
+        </div>
+      </div>
+    </section>
+
   </main>
 
   <div class="footer-note">RUNS ENTIRELY CLIENT-SIDE · NOTHING IS SENT ANYWHERE EXCEPT REQUESTS YOU EXPLICITLY FIRE · v1.0</div>
@@ -595,6 +658,7 @@ const TOOLS = [
   { id:'decoder', glyph:'⌬', label:'Decoder' },
   { id:'comparer', glyph:'⇅', label:'Comparer' },
   { id:'history', glyph:'◷', label:'History' },
+  { id:'recon', glyph:'◎', label:'Recon' },
 ];
 const tabbar = document.getElementById('tabbar');
 TOOLS.forEach(t=>{
@@ -1044,6 +1108,204 @@ document.getElementById('hist-clear').addEventListener('click', ()=>{
   clearHistory();
   renderHistory();
 });
+
+/* ------------------------------------------------------------------ *
+ * RECON
+ * ------------------------------------------------------------------ */
+
+function detectTargetType(t){
+  if(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.test(t)) return 'ipv4';
+  if(t.indexOf(':') !== -1 && /^[0-9a-fA-F:]+$/.test(t)) return 'ipv6';
+  return 'domain';
+}
+
+async function dohQuery(name, type){
+  const url = 'https://dns.google/resolve?name=' + encodeURIComponent(name) + '&type=' + encodeURIComponent(type);
+  try{
+    const res = await fetch(url, { signal: AbortSignal.timeout(6000) });
+    if(!res.ok) return { ok:false, error: 'HTTP '+res.status };
+    const data = await res.json();
+    return { ok:true, data };
+  }catch(e){ return { ok:false, error: (e && e.message) || String(e) }; }
+}
+
+function reverseIpv4(ip){ return ip.split('.').reverse().join('.') + '.in-addr.arpa'; }
+
+async function rdapLookup(target, isIp){
+  const url = 'https://rdap.org/' + (isIp ? 'ip/' : 'domain/') + encodeURIComponent(target);
+  try{
+    const res = await fetch(url, { headers:{accept:'application/rdap+json'}, signal: AbortSignal.timeout(8000) });
+    if(!res.ok) return { ok:false, error:'HTTP '+res.status };
+    const data = await res.json();
+    return { ok:true, data };
+  }catch(e){ return { ok:false, error: (e && e.message) || String(e) }; }
+}
+
+const RECON_PORTS = [
+  {port:80, scheme:'http'}, {port:443, scheme:'https'},
+  {port:8080, scheme:'http'}, {port:8443, scheme:'https'},
+  {port:8000, scheme:'http'}, {port:3000, scheme:'http'},
+];
+
+async function checkPort(host, port, scheme){
+  const url = scheme+'://'+host+':'+port+'/';
+  const t0 = performance.now();
+  try{
+    await fetch(url, { mode:'no-cors', cache:'no-store', signal: AbortSignal.timeout(4000) });
+    return { port, scheme, status:'reachable', ms: Math.round(performance.now()-t0) };
+  }catch(e){
+    const ms = Math.round(performance.now()-t0);
+    const msg = String((e && e.message) || e);
+    if(e && e.name === 'TimeoutError') return { port, scheme, status:'timeout', ms };
+    if(msg.indexOf('UNSAFE_PORT') !== -1) return { port, scheme, status:'blocked by browser', ms };
+    return { port, scheme, status:'closed / unreachable', ms };
+  }
+}
+
+function buildLocalCommands(target){
+  return [
+    { label:'DNS — all records', cmd:'dig '+target+' ANY' },
+    { label:'Nameservers', cmd:'dig '+target+' NS +short' },
+    { label:'Reverse DNS', cmd:'nslookup '+target },
+    { label:'WHOIS', cmd:'whois '+target },
+    { label:'Ping', cmd:'ping -c 4 '+target },
+    { label:'Traceroute', cmd:'traceroute '+target },
+    { label:'Full port scan (authorized targets only)', cmd:'nmap -sV -p- '+target },
+  ];
+}
+
+function renderReconCommands(target){
+  const wrap = document.getElementById('recon-commands');
+  wrap.innerHTML = '';
+  buildLocalCommands(target).forEach(c=>{
+    const row = document.createElement('div');
+    row.className = 'cmd-row';
+    row.innerHTML = '<div><div class="hint" style="margin-bottom:2px;">'+escapeHtml(c.label)+'</div><code>'+escapeHtml(c.cmd)+'</code></div>';
+    const btn = document.createElement('button');
+    btn.type = 'button'; btn.className = 'btn btn-ghost btn-sm'; btn.textContent = 'Copy';
+    btn.addEventListener('click', async ()=>{
+      try{
+        await navigator.clipboard.writeText(c.cmd);
+        btn.textContent = 'Copied';
+        setTimeout(()=>{ btn.textContent = 'Copy'; }, 1200);
+      }catch(e){ btn.textContent = 'Select & copy manually'; }
+    });
+    row.appendChild(btn);
+    wrap.appendChild(row);
+  });
+}
+
+function whoisRow(label, value){
+  return '<div class="whois-row"><span class="whois-label">'+escapeHtml(label)+'</span><span class="whois-value">'+escapeHtml(value)+'</span></div>';
+}
+
+function extractRdapSummary(data){
+  const rows = [];
+  if(data.ldhName) rows.push(['Name', data.ldhName]);
+  if(data.handle) rows.push(['Handle', data.handle]);
+  if(data.name) rows.push(['Network name', data.name]);
+  if(data.startAddress) rows.push(['Range start', data.startAddress]);
+  if(data.endAddress) rows.push(['Range end', data.endAddress]);
+  if(data.country) rows.push(['Country', data.country]);
+  if(Array.isArray(data.status) && data.status.length) rows.push(['Status', data.status.join(', ')]);
+  if(Array.isArray(data.events)){
+    data.events.forEach(ev=>{
+      if(ev.eventAction && ev.eventDate) rows.push([ev.eventAction, ev.eventDate.slice(0,10)]);
+    });
+  }
+  if(Array.isArray(data.nameservers) && data.nameservers.length){
+    rows.push(['Name servers', data.nameservers.map(ns=>ns.ldhName).filter(Boolean).join(', ')]);
+  }
+  if(Array.isArray(data.entities)){
+    const registrar = data.entities.find(e=>Array.isArray(e.roles) && e.roles.indexOf('registrar') !== -1);
+    if(registrar){
+      let fn = null;
+      if(Array.isArray(registrar.vcardArray) && Array.isArray(registrar.vcardArray[1])){
+        const fnEntry = registrar.vcardArray[1].find(v=>v[0]==='fn');
+        if(fnEntry) fn = fnEntry[3];
+      }
+      rows.push(['Registrar', fn || registrar.handle || '(unnamed)']);
+    }
+  }
+  return rows;
+}
+
+async function runRecon(){
+  const target = document.getElementById('recon-target').value.trim();
+  if(!target) return;
+  const type = detectTargetType(target);
+  const isIp = type !== 'domain';
+
+  document.getElementById('recon-resolved').innerHTML = '<span class="hint">Looking up…</span>';
+  document.getElementById('recon-dns-tbody').innerHTML = '<tr><td colspan="3" class="hint">Loading…</td></tr>';
+  document.getElementById('recon-ns').innerHTML = '<span class="hint">Loading…</span>';
+  document.getElementById('recon-whois').innerHTML = '<span class="hint">Loading…</span>';
+  document.getElementById('recon-ports-tbody').innerHTML = '<tr><td colspan="4" class="hint">Checking…</td></tr>';
+  renderReconCommands(target);
+
+  (async ()=>{
+    if(!isIp){
+      const types = ['A','AAAA','MX','TXT','NS','CNAME','SOA'];
+      const results = await Promise.all(types.map(t=>dohQuery(target, t)));
+      const rows = [];
+      const resolvedIps = [];
+      results.forEach((r, i)=>{
+        const t = types[i];
+        if(!r.ok || !r.data.Answer) return;
+        r.data.Answer.forEach(ans=>{
+          rows.push([t, ans.data, ans.TTL]);
+          if(t === 'A' || t === 'AAAA') resolvedIps.push(ans.data);
+        });
+      });
+      document.getElementById('recon-dns-tbody').innerHTML = rows.length
+        ? rows.map(r=>'<tr><td class="mono">'+escapeHtml(r[0])+'</td><td class="mono">'+escapeHtml(r[1])+'</td><td class="mono">'+escapeHtml(r[2])+'</td></tr>').join('')
+        : '<tr><td colspan="3" class="hint">No records found (or the lookup failed).</td></tr>';
+      document.getElementById('recon-resolved').innerHTML = resolvedIps.length
+        ? resolvedIps.map(ip=>'<span class="pill mono">'+escapeHtml(ip)+'</span>').join(' ')
+        : '<span class="hint">No A/AAAA records found.</span>';
+      const nsRows = rows.filter(r=>r[0]==='NS');
+      document.getElementById('recon-ns').innerHTML = nsRows.length
+        ? nsRows.map(r=>'<span class="pill mono">'+escapeHtml(r[1])+'</span>').join(' ')
+        : '<span class="hint">No NS records found.</span>';
+    } else {
+      document.getElementById('recon-resolved').innerHTML = '<span class="pill mono">'+escapeHtml(target)+'</span>';
+      if(type === 'ipv4'){
+        const ptr = await dohQuery(reverseIpv4(target), 'PTR');
+        document.getElementById('recon-dns-tbody').innerHTML = (ptr.ok && ptr.data.Answer && ptr.data.Answer.length)
+          ? ptr.data.Answer.map(a=>'<tr><td class="mono">PTR</td><td class="mono">'+escapeHtml(a.data)+'</td><td class="mono">'+escapeHtml(a.TTL)+'</td></tr>').join('')
+          : '<tr><td colspan="3" class="hint">No reverse DNS (PTR) record found.</td></tr>';
+      } else {
+        document.getElementById('recon-dns-tbody').innerHTML = '<tr><td colspan="3" class="hint">Reverse DNS lookup for IPv6 isn\'t implemented here.</td></tr>';
+      }
+      document.getElementById('recon-ns').innerHTML = '<span class="hint">Not applicable for an IP target.</span>';
+    }
+  })();
+
+  (async ()=>{
+    const r = await rdapLookup(target, isIp);
+    const el = document.getElementById('recon-whois');
+    if(!r.ok){
+      el.innerHTML = '<span class="hint">Couldn\'t load RDAP/WHOIS data ('+escapeHtml(r.error)+') — the registry may not allow browser access. Try the <code>whois</code> command below instead.</span>';
+      return;
+    }
+    const rows = extractRdapSummary(r.data);
+    const summary = rows.length ? rows.map(([k,v])=>whoisRow(k,v)).join('') : '<span class="hint">No summary fields found — see raw response below.</span>';
+    const raw = '<details class="more" style="margin-top:10px;"><summary>Raw RDAP response</summary><pre class="readout" style="margin-top:10px;">'+escapeHtml(JSON.stringify(r.data, null, 2))+'</pre></details>';
+    el.innerHTML = summary + raw;
+  })();
+
+  (async ()=>{
+    const results = await Promise.all(RECON_PORTS.map(p=>checkPort(target, p.port, p.scheme)));
+    document.getElementById('recon-ports-tbody').innerHTML = results.map(r=>{
+      const dot = r.status==='reachable' ? 'dot-ok' : (r.status==='timeout' ? 'dot-caution' : 'dot-restricted');
+      return '<tr><td class="mono">'+r.port+'</td><td class="mono">'+r.scheme+'</td><td><span class="status-dot '+dot+'"></span>'+escapeHtml(r.status)+'</td><td class="mono">'+r.ms+' ms</td></tr>';
+    }).join('');
+  })();
+}
+
+document.getElementById('recon-run').addEventListener('click', runRecon);
+document.getElementById('recon-target').addEventListener('keydown', (e)=>{ if(e.key==='Enter') runRecon(); });
+document.getElementById('recon-target').value = 'example.com';
 
 })();
 </script>

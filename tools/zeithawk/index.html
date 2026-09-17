@@ -1391,11 +1391,16 @@ async function runRecon(){
       const resolvedIps = [];
       results.forEach((r, i)=>{
         const t = types[i];
-        if(!r.ok || !r.data.Answer) return;
-        r.data.Answer.forEach(ans=>{
-          rows.push([t, ans.data, ans.TTL]);
-          if(t === 'A' || t === 'AAAA') resolvedIps.push(ans.data);
-        });
+        // A malformed/unexpected response for one record type must never
+        // stop the rest of forEach's iterations (types after it in the
+        // array — NS, CNAME, SOA — would otherwise silently disappear).
+        try{
+          if(!r.ok || !Array.isArray(r.data.Answer)) return;
+          r.data.Answer.forEach(ans=>{
+            rows.push([t, ans.data, ans.TTL]);
+            if(t === 'A' || t === 'AAAA') resolvedIps.push(ans.data);
+          });
+        }catch(e){ /* skip this record type, keep processing the rest */ }
       });
       document.getElementById('recon-dns-tbody').innerHTML = rows.length
         ? rows.map(r=>'<tr><td class="mono">'+escapeHtml(r[0])+'</td><td class="mono">'+escapeHtml(r[1])+'</td><td class="mono">'+escapeHtml(r[2])+'</td></tr>').join('')

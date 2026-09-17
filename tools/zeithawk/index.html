@@ -762,7 +762,7 @@ const PRESETS = {
   numeric: Array.from({length:10}, (_,i)=>String(i+1)).join('\n'),
   usernames: ['admin','administrator','root','test','guest','service','support','backup','demo','user'].join('\n'),
   sqli: ["' OR '1'='1", "' OR 1=1--", "\" OR \"1\"=\"1", "1' AND '1'='1", "'; DROP TABLE users--", "1 OR 1=1"].join('\n'),
-  xss: ['<script>alert(1)</script>', '"><img src=x onerror=alert(1)>', "'><svg onload=alert(1)>", '<img src=x onerror=alert(document.domain)>'].join('\n'),
+  xss: ['<script>alert(1)<\/script>', '"><img src=x onerror=alert(1)>', "'><svg onload=alert(1)>", '<img src=x onerror=alert(document.domain)>'].join('\n'),
   traversal: ['../../../../etc/passwd', '..%2f..%2f..%2fetc%2fpasswd', '....//....//etc/passwd', '/etc/passwd'].join('\n'),
 };
 document.getElementById('int-preset').value = 'numeric';

@@ -95,8 +95,6 @@
   .app-header{display:flex;flex-direction:column;gap:6px;margin-bottom:24px;}
   .eyebrow{font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:0.14em;text-transform:uppercase;color:var(--accent);display:flex;align-items:center;gap:8px;}
   .eyebrow .dot{width:6px;height:6px;border-radius:50%;background:var(--accent);display:inline-block;}
-  .title-row{display:flex;align-items:center;gap:12px;}
-  .hawk-icon{height:clamp(34px,5.2vw,48px);width:auto;flex-shrink:0;filter:drop-shadow(0 2px 3px rgba(0,0,0,0.18));}
   h1.title{font-size:clamp(28px,4.5vw,40px);line-height:1.05;color:var(--ink);}
   .subtitle{color:var(--ink-soft);font-size:15px;max-width:74ch;line-height:1.5;margin-top:4px;}
 
@@ -271,16 +269,7 @@
 <div class="wrap">
   <header class="app-header">
     <span class="eyebrow"><span class="dot"></span>Zeitview · Security Tooling</span>
-    <div class="title-row">
-      <svg class="hawk-icon" viewBox="0 0 120 100" role="img" aria-label="ZeitHawk icon">
-        <ellipse cx="34" cy="44" rx="30" ry="28" fill="var(--accent)"/>
-        <polygon points="54,18 118,38 56,58" fill="var(--accent)"/>
-        <polygon points="58,35 98,36.5 96,41 56,40" fill="var(--paper)"/>
-        <path d="M 26,16 Q 40,10 52,18" stroke="var(--paper)" stroke-width="4" fill="none" stroke-linecap="round"/>
-        <circle cx="42" cy="30" r="5.5" fill="var(--paper)"/>
-      </svg>
-      <h1 class="title">ZeitHawk</h1>
-    </div>
+    <h1 class="title">ZeitHawk</h1>
     <p class="subtitle">Craft, replay, and fuzz HTTP requests, then decode, hash, and diff what comes back — a lightweight, browser-only toolkit built in the spirit of Burp Suite's core tools: Repeater, Intruder, Decoder, and Comparer.</p>
     <div class="disclaimer">
       <span aria-hidden="true">⚠</span>

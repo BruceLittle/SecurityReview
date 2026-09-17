@@ -46,3 +46,17 @@ target yet, the "Request Security authorization" link in the banner opens
 a prefilled email to Security (same escalation pattern as the AI Tool
 Finder artifact) — update `SECURITY_APPROVAL_EMAIL` in `index.html` if
 that alias ever changes.
+
+## Optional backend: a durable log of authorization requests
+
+Clicking "Request Security authorization" always opens the mailto above,
+with zero setup. It also *tries* to log the same request to Firestore via
+a small Apps Script web app, so there's a searchable record beyond one
+inbox — see `../apps-script-backend/README.md` for what that is and how
+to deploy it (shared with the AI Tool Finder artifact, which logs its own
+"Request Security Approval" / "Request IT review" clicks the same way).
+
+Until you deploy it and paste the resulting URL into `APPS_SCRIPT_URL` in
+`index.html`, this is a silent no-op — the mailto flow is unaffected
+either way, and the "View recent authorization requests" panel in the
+banner just says it isn't configured yet.

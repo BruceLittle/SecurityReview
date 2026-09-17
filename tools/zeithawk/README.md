@@ -10,6 +10,23 @@ It is not part of the SecurityReview Rails application and has no runtime
 dependency on it — it lives here as a companion tool for people doing manual
 review/testing work against systems they're authorized to test.
 
+## Running it
+
+Host `index.html` as a static file (e.g. via [GitHub
+Pages](https://github.com/BruceLittle/SecurityReview/settings/pages) —
+Source: "Deploy from a branch", branch `main`, folder `/(root)` — it'll be
+served at `https://<owner>.github.io/<repo>/tools/zeithawk/`) or open the
+file directly in a browser.
+
+**Don't rely on a Claude Artifact preview of this file for real use.**
+Claude's artifact sandbox blocks outbound `fetch()` to arbitrary
+third-party domains via its own CSP — every request in this app
+(Repeater, Intruder, Recon, Vuln Scan, and any CORS proxy) will fail with
+a generic `Failed to fetch` there regardless of target, proxy
+configuration, or anything else in this code. That's a property of the
+artifact wrapper, not a bug here — confirmed by the exact same requests
+working correctly once run from a real hosted page instead.
+
 ## Tools
 
 - **Repeater** — build one HTTP request (method/URL/headers/body), send it,

@@ -106,6 +106,19 @@
   .disclaimer strong{color:var(--restricted);}
   .disclaimer code{background:var(--paper-raised);}
 
+  .proxy-toggle{
+    display:flex;gap:10px;align-items:flex-start;
+    background:var(--slate-soft);border:1px solid var(--line);border-radius:10px;
+    padding:12px 14px;font-size:13px;line-height:1.55;color:var(--ink);margin-top:10px;
+  }
+  .proxy-toggle code{background:var(--paper-raised);}
+  .switch{position:relative;display:inline-block;width:36px;height:20px;flex:0 0 auto;margin-top:1px;}
+  .switch input{opacity:0;width:0;height:0;}
+  .switch-track{position:absolute;inset:0;background:var(--line);border-radius:999px;cursor:pointer;transition:background 0.15s;}
+  .switch-track::before{content:'';position:absolute;width:16px;height:16px;left:2px;top:2px;background:var(--paper-raised);border-radius:50%;transition:transform 0.15s;box-shadow:0 1px 2px rgba(0,0,0,0.25);}
+  .switch input:checked + .switch-track{background:var(--accent);}
+  .switch input:checked + .switch-track::before{transform:translateX(16px);}
+
   /* tab bar (reuses the wizard "console" instrument as a tool switcher) */
   .console{
     display:flex;align-items:stretch;gap:0;
@@ -290,6 +303,15 @@
       <span aria-hidden="true">⚠</span>
       <span>
         <strong>Authorized testing only</strong> — only point this at systems you own or are explicitly authorized to test. Every request runs from your browser, so it's bound by the same CORS rules as any web page: the target must allow cross-origin access for you to see its status, headers, or body here, and browsers never let a page override <code>Host</code>, <code>Cookie</code>, <code>Origin</code>, or a handful of other headers. Nothing you enter leaves your browser except the requests you explicitly send.
+      </span>
+    </div>
+    <div class="proxy-toggle">
+      <label class="switch">
+        <input type="checkbox" id="proxy-toggle-input" />
+        <span class="switch-track"></span>
+      </label>
+      <span>
+        <strong>CORS proxy: <span id="proxy-toggle-status">on</span></strong> — routes Repeater, Intruder, Recon's DNS/RDAP lookups, and Vuln Scan through the public proxy <code>corsproxy.io</code> so requests reach targets that would otherwise block cross-origin access. This sends the target URL — and anything you send it (headers, body, payloads) — through that third-party service, which you don't control. Turn this off for anything sensitive, or when testing a target that already sets its own permissive CORS headers.
       </span>
     </div>
   </header>
@@ -654,6 +676,35 @@ function dotClass(status){
   return 'dot-restricted';
 }
 
+/* ------------------------------------------------------------------ *
+ * Public CORS proxy (opt-out) — routes requests through corsproxy.io so
+ * targets that don't set their own CORS headers can still be reached.
+ * A third-party service sees the target URL and whatever you send it,
+ * so this is off-able for sensitive targets. Does NOT change the header-
+ * visibility caveat in Vuln Scan: we only ever claim a header is present
+ * when we actually read it, never infer "missing" from silence, since we
+ * can't verify what corsproxy.io itself exposes via CORS.
+ * ------------------------------------------------------------------ */
+
+const CORS_PROXY_BASE = 'https://corsproxy.io/?url=';
+function isProxyEnabled(){
+  try{ return localStorage.getItem('zeithawk_proxy_enabled') !== '0'; }catch(e){ return true; }
+}
+function setProxyEnabled(v){
+  try{ localStorage.setItem('zeithawk_proxy_enabled', v ? '1' : '0'); }catch(e){}
+}
+function viaProxy(url){
+  return isProxyEnabled() ? (CORS_PROXY_BASE + encodeURIComponent(url)) : url;
+}
+const proxyInput = document.getElementById('proxy-toggle-input');
+const proxyStatus = document.getElementById('proxy-toggle-status');
+proxyInput.checked = isProxyEnabled();
+proxyStatus.textContent = proxyInput.checked ? 'on' : 'off';
+proxyInput.addEventListener('change', ()=>{
+  setProxyEnabled(proxyInput.checked);
+  proxyStatus.textContent = proxyInput.checked ? 'on' : 'off';
+});
+
 // Fires a request from the browser and normalizes the outcome. Subject to
 // the same CORS/forbidden-header rules as any page — see the banner above.
 async function fireRequest(method, url, headerRows, body){
@@ -668,7 +719,7 @@ async function fireRequest(method, url, headerRows, body){
   if(body && !['GET','HEAD'].includes(method)) opts.body = body;
   const t0 = performance.now();
   try{
-    const res = await fetch(url, opts);
+    const res = await fetch(viaProxy(url), opts);
     const text = await res.text();
     const ms = Math.round(performance.now() - t0);
     const outHeaders = [];
@@ -1174,7 +1225,7 @@ function detectTargetType(t){
 async function dohQuery(name, type){
   const url = 'https://dns.google/resolve?name=' + encodeURIComponent(name) + '&type=' + encodeURIComponent(type);
   try{
-    const res = await fetch(url, { signal: AbortSignal.timeout(6000) });
+    const res = await fetch(viaProxy(url), { signal: AbortSignal.timeout(6000) });
     if(!res.ok) return { ok:false, error: 'HTTP '+res.status };
     const data = await res.json();
     return { ok:true, data };
@@ -1186,7 +1237,7 @@ function reverseIpv4(ip){ return ip.split('.').reverse().join('.') + '.in-addr.a
 async function rdapLookup(target, isIp){
   const url = 'https://rdap.org/' + (isIp ? 'ip/' : 'domain/') + encodeURIComponent(target);
   try{
-    const res = await fetch(url, { headers:{accept:'application/rdap+json'}, signal: AbortSignal.timeout(8000) });
+    const res = await fetch(viaProxy(url), { headers:{accept:'application/rdap+json'}, signal: AbortSignal.timeout(8000) });
     if(!res.ok) return { ok:false, error:'HTTP '+res.status };
     const data = await res.json();
     return { ok:true, data };
@@ -1199,6 +1250,9 @@ const RECON_PORTS = [
   {port:8000, scheme:'http'}, {port:3000, scheme:'http'},
 ];
 
+// Deliberately not routed through the CORS proxy: mode:'no-cors' already
+// isn't blocked by CORS (that's why it's used here), so proxying would
+// only change the network vantage point, not fix anything.
 async function checkPort(host, port, scheme){
   const url = scheme+'://'+host+':'+port+'/';
   const t0 = performance.now();
@@ -1429,7 +1483,7 @@ async function runVulnScan(){
 
   let mainRes = null, mainErr = null, bodyText = '';
   try{
-    mainRes = await fetch(url, { mode:'cors', signal: AbortSignal.timeout(8000) });
+    mainRes = await fetch(viaProxy(url), { mode:'cors', signal: AbortSignal.timeout(8000) });
     bodyText = await mainRes.text();
   }catch(e){ mainErr = (e && e.message) || String(e); }
 
@@ -1481,7 +1535,7 @@ async function runVulnScan(){
 
   const pathResults = await Promise.all(PATH_CHECKS.map(async pc=>{
     try{
-      const res = await fetch(origin + pc.path, { mode:'cors', signal: AbortSignal.timeout(5000) });
+      const res = await fetch(viaProxy(origin + pc.path), { mode:'cors', signal: AbortSignal.timeout(5000) });
       return Object.assign({}, pc, { status: res.status });
     }catch(e){ return Object.assign({}, pc, { status: null }); }
   }));

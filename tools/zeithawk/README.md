@@ -38,7 +38,7 @@ review/testing work against systems they're authorized to test.
 
 ## Constraints (by design — it runs entirely client-side)
 
-Because it's a plain web page with no proxy or backend, every request is
+Because it's a plain web page with no backend of its own, every request is
 subject to the same rules any page's `fetch()` is subject to:
 
 - **CORS** — the target must allow cross-origin requests, or the response
@@ -51,6 +51,36 @@ These aren't bugs to fix later — they're the tradeoff of a zero-install,
 zero-backend tool. For anything that needs true request interception or
 raw socket control, use a real intercepting proxy (Burp Suite, OWASP ZAP,
 mitmproxy).
+
+### CORS proxy toggle (on by default)
+
+A switch in the header routes Repeater, Intruder, Recon's DNS/RDAP
+lookups, and Vuln Scan through the public proxy
+[corsproxy.io](https://corsproxy.io), which fetches the target
+server-side and returns the response with permissive CORS headers —
+letting ZeitHawk reach targets that don't set their own. It's **on by
+default** since that's the point of the toggle, but it comes with real
+tradeoffs:
+
+- **It's a third party.** The target URL, and anything you send it
+  (headers, body, Intruder payloads), passes through corsproxy.io's
+  servers, which you don't control and can't audit. Turn it off for
+  anything sensitive, internal, or already CORS-permissive.
+- **It doesn't change Vuln Scan's honesty guarantee.** Header checks still
+  only ever report "Present" when actually read, never a false "Missing" —
+  because whether corsproxy.io itself exposes the target's original
+  headers via `Access-Control-Expose-Headers` isn't something ZeitHawk can
+  verify, on or off.
+- **Method/header/body forwarding depends on corsproxy.io's own behavior**,
+  not ZeitHawk's — if a request behaves differently proxied vs. direct,
+  toggle it off and compare.
+- Recon's port-reachability check is deliberately **not** proxied: it uses
+  `mode:'no-cors'`, which already isn't blocked by CORS, so routing it
+  through a proxy would only change the network vantage point, not fix
+  anything.
+
+State persists per-browser via `localStorage`; nothing about the toggle
+itself is sent anywhere.
 
 **Authorized testing only.** Only point this at systems you own or have
 explicit permission to test.

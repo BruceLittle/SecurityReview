@@ -112,6 +112,7 @@
     padding:12px 14px;font-size:13px;line-height:1.55;color:var(--ink);margin-top:10px;
   }
   .proxy-toggle code{background:var(--paper-raised);}
+  .proxy-base-row input{font-family:'IBM Plex Mono',monospace;font-size:12px;padding:7px 9px;}
   .switch{position:relative;display:inline-block;width:36px;height:20px;flex:0 0 auto;margin-top:1px;}
   .switch input{opacity:0;width:0;height:0;}
   .switch-track{position:absolute;inset:0;background:var(--line);border-radius:999px;cursor:pointer;transition:background 0.15s;}
@@ -311,7 +312,12 @@
         <span class="switch-track"></span>
       </label>
       <span>
-        <strong>CORS proxy: <span id="proxy-toggle-status">on</span></strong> — routes Repeater, Intruder, Recon's DNS/RDAP lookups, and Vuln Scan through the public proxy <code>corsproxy.io</code> so requests reach targets that would otherwise block cross-origin access. This sends the target URL — and anything you send it (headers, body, payloads) — through that third-party service, which you don't control. Turn this off for anything sensitive, or when testing a target that already sets its own permissive CORS headers.
+        <strong>CORS proxy: <span id="proxy-toggle-status">on</span></strong> — routes Repeater, Intruder, Recon's DNS/RDAP lookups, and Vuln Scan through a proxy so requests reach targets that would otherwise block cross-origin access. This sends the target URL — and anything you send it (headers, body, payloads) — through whatever endpoint is set below, which you don't control unless you deployed it yourself. Turn this off for anything sensitive, or when testing a target that already sets its own permissive CORS headers.
+        <div class="proxy-base-row">
+          <label for="proxy-base-input" class="field-label" style="margin:8px 0 4px;">Proxy endpoint (target URL is appended, URL-encoded)</label>
+          <input id="proxy-base-input" type="text" placeholder="https://corsproxy.io/?url=" spellcheck="false" />
+          <p class="hint" style="margin-top:4px;">Default is the public <code>corsproxy.io</code>. See <code>tools/zeithawk/cors-proxy-worker/</code> in the repo to deploy your own private proxy and paste its URL here instead.</p>
+        </div>
       </span>
     </div>
   </header>
@@ -677,32 +683,60 @@ function dotClass(status){
 }
 
 /* ------------------------------------------------------------------ *
- * Public CORS proxy (opt-out) — routes requests through corsproxy.io so
- * targets that don't set their own CORS headers can still be reached.
- * A third-party service sees the target URL and whatever you send it,
+ * CORS proxy (opt-out, configurable endpoint) — routes requests through
+ * a proxy so targets that don't set their own CORS headers can still be
+ * reached. Defaults to the public corsproxy.io, but the endpoint can be
+ * pointed at a private proxy instead (see tools/zeithawk/cors-proxy-worker/).
+ * Whichever endpoint is set sees the target URL and whatever you send it,
  * so this is off-able for sensitive targets. Does NOT change the header-
  * visibility caveat in Vuln Scan: we only ever claim a header is present
  * when we actually read it, never infer "missing" from silence, since we
- * can't verify what corsproxy.io itself exposes via CORS.
+ * can't verify what the configured proxy itself exposes via CORS.
  * ------------------------------------------------------------------ */
 
-const CORS_PROXY_BASE = 'https://corsproxy.io/?url=';
+const DEFAULT_PROXY_BASE = 'https://corsproxy.io/?url=';
 function isProxyEnabled(){
   try{ return localStorage.getItem('zeithawk_proxy_enabled') !== '0'; }catch(e){ return true; }
 }
 function setProxyEnabled(v){
   try{ localStorage.setItem('zeithawk_proxy_enabled', v ? '1' : '0'); }catch(e){}
 }
+function getProxyBase(){
+  try{ return localStorage.getItem('zeithawk_proxy_base') || DEFAULT_PROXY_BASE; }catch(e){ return DEFAULT_PROXY_BASE; }
+}
+function setProxyBase(v){
+  try{ localStorage.setItem('zeithawk_proxy_base', (v||'').trim() || DEFAULT_PROXY_BASE); }catch(e){}
+}
 function viaProxy(url){
-  return isProxyEnabled() ? (CORS_PROXY_BASE + encodeURIComponent(url)) : url;
+  return isProxyEnabled() ? (getProxyBase() + encodeURIComponent(url)) : url;
+}
+// Tries a direct fetch first and only falls back to the configured proxy
+// if that outright fails. Targets that already send their own permissive
+// CORS headers (dns.google, for one) keep working with no dependency on
+// a third party at all; targets that need the proxy still get it. This
+// also means a proxy outage/misbehavior never breaks something that
+// worked fine unproxied before the proxy toggle existed.
+async function fetchDirectOrProxied(url, opts){
+  if(!isProxyEnabled()) return fetch(url, opts);
+  try{
+    return await fetch(url, opts);
+  }catch(directErr){
+    return fetch(viaProxy(url), opts);
+  }
 }
 const proxyInput = document.getElementById('proxy-toggle-input');
 const proxyStatus = document.getElementById('proxy-toggle-status');
+const proxyBaseInput = document.getElementById('proxy-base-input');
 proxyInput.checked = isProxyEnabled();
 proxyStatus.textContent = proxyInput.checked ? 'on' : 'off';
+proxyBaseInput.value = getProxyBase();
 proxyInput.addEventListener('change', ()=>{
   setProxyEnabled(proxyInput.checked);
   proxyStatus.textContent = proxyInput.checked ? 'on' : 'off';
+});
+proxyBaseInput.addEventListener('change', ()=>{
+  setProxyBase(proxyBaseInput.value);
+  proxyBaseInput.value = getProxyBase();
 });
 
 // Fires a request from the browser and normalizes the outcome. Subject to
@@ -719,7 +753,7 @@ async function fireRequest(method, url, headerRows, body){
   if(body && !['GET','HEAD'].includes(method)) opts.body = body;
   const t0 = performance.now();
   try{
-    const res = await fetch(viaProxy(url), opts);
+    const res = await fetchDirectOrProxied(url, opts);
     const text = await res.text();
     const ms = Math.round(performance.now() - t0);
     const outHeaders = [];
@@ -1225,7 +1259,7 @@ function detectTargetType(t){
 async function dohQuery(name, type){
   const url = 'https://dns.google/resolve?name=' + encodeURIComponent(name) + '&type=' + encodeURIComponent(type);
   try{
-    const res = await fetch(viaProxy(url), { signal: AbortSignal.timeout(6000) });
+    const res = await fetchDirectOrProxied(url, { signal: AbortSignal.timeout(6000) });
     if(!res.ok) return { ok:false, error: 'HTTP '+res.status };
     const data = await res.json();
     return { ok:true, data };
@@ -1237,7 +1271,7 @@ function reverseIpv4(ip){ return ip.split('.').reverse().join('.') + '.in-addr.a
 async function rdapLookup(target, isIp){
   const url = 'https://rdap.org/' + (isIp ? 'ip/' : 'domain/') + encodeURIComponent(target);
   try{
-    const res = await fetch(viaProxy(url), { headers:{accept:'application/rdap+json'}, signal: AbortSignal.timeout(8000) });
+    const res = await fetchDirectOrProxied(url, { headers:{accept:'application/rdap+json'}, signal: AbortSignal.timeout(8000) });
     if(!res.ok) return { ok:false, error:'HTTP '+res.status };
     const data = await res.json();
     return { ok:true, data };
@@ -1357,11 +1391,16 @@ async function runRecon(){
       const resolvedIps = [];
       results.forEach((r, i)=>{
         const t = types[i];
-        if(!r.ok || !r.data.Answer) return;
-        r.data.Answer.forEach(ans=>{
-          rows.push([t, ans.data, ans.TTL]);
-          if(t === 'A' || t === 'AAAA') resolvedIps.push(ans.data);
-        });
+        // A malformed/unexpected response for one record type must never
+        // stop the rest of forEach's iterations (types after it in the
+        // array — NS, CNAME, SOA — would otherwise silently disappear).
+        try{
+          if(!r.ok || !Array.isArray(r.data.Answer)) return;
+          r.data.Answer.forEach(ans=>{
+            rows.push([t, ans.data, ans.TTL]);
+            if(t === 'A' || t === 'AAAA') resolvedIps.push(ans.data);
+          });
+        }catch(e){ /* skip this record type, keep processing the rest */ }
       });
       document.getElementById('recon-dns-tbody').innerHTML = rows.length
         ? rows.map(r=>'<tr><td class="mono">'+escapeHtml(r[0])+'</td><td class="mono">'+escapeHtml(r[1])+'</td><td class="mono">'+escapeHtml(r[2])+'</td></tr>').join('')
@@ -1483,7 +1522,7 @@ async function runVulnScan(){
 
   let mainRes = null, mainErr = null, bodyText = '';
   try{
-    mainRes = await fetch(viaProxy(url), { mode:'cors', signal: AbortSignal.timeout(8000) });
+    mainRes = await fetchDirectOrProxied(url, { mode:'cors', signal: AbortSignal.timeout(8000) });
     bodyText = await mainRes.text();
   }catch(e){ mainErr = (e && e.message) || String(e); }
 
@@ -1535,7 +1574,7 @@ async function runVulnScan(){
 
   const pathResults = await Promise.all(PATH_CHECKS.map(async pc=>{
     try{
-      const res = await fetch(viaProxy(origin + pc.path), { mode:'cors', signal: AbortSignal.timeout(5000) });
+      const res = await fetchDirectOrProxied(origin + pc.path, { mode:'cors', signal: AbortSignal.timeout(5000) });
       return Object.assign({}, pc, { status: res.status });
     }catch(e){ return Object.assign({}, pc, { status: null }); }
   }));

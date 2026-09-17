@@ -10,6 +10,23 @@ It is not part of the SecurityReview Rails application and has no runtime
 dependency on it — it lives here as a companion tool for people doing manual
 review/testing work against systems they're authorized to test.
 
+## Running it
+
+Host `index.html` as a static file (e.g. via [GitHub
+Pages](https://github.com/BruceLittle/SecurityReview/settings/pages) —
+Source: "Deploy from a branch", branch `main`, folder `/(root)` — it'll be
+served at `https://<owner>.github.io/<repo>/tools/zeithawk/`) or open the
+file directly in a browser.
+
+**Don't rely on a Claude Artifact preview of this file for real use.**
+Claude's artifact sandbox blocks outbound `fetch()` to arbitrary
+third-party domains via its own CSP — every request in this app
+(Repeater, Intruder, Recon, Vuln Scan, and any CORS proxy) will fail with
+a generic `Failed to fetch` there regardless of target, proxy
+configuration, or anything else in this code. That's a property of the
+artifact wrapper, not a bug here — confirmed by the exact same requests
+working correctly once run from a real hosted page instead.
+
 ## Tools
 
 - **Repeater** — build one HTTP request (method/URL/headers/body), send it,
@@ -52,26 +69,26 @@ zero-backend tool. For anything that needs true request interception or
 raw socket control, use a real intercepting proxy (Burp Suite, OWASP ZAP,
 mitmproxy).
 
-### CORS proxy toggle (on by default)
+### CORS proxy toggle (on by default, configurable endpoint)
 
 A switch in the header routes Repeater, Intruder, Recon's DNS/RDAP
-lookups, and Vuln Scan through the public proxy
-[corsproxy.io](https://corsproxy.io), which fetches the target
+lookups, and Vuln Scan through a proxy, which fetches the target
 server-side and returns the response with permissive CORS headers —
 letting ZeitHawk reach targets that don't set their own. It's **on by
 default** since that's the point of the toggle, but it comes with real
 tradeoffs:
 
-- **It's a third party.** The target URL, and anything you send it
-  (headers, body, Intruder payloads), passes through corsproxy.io's
-  servers, which you don't control and can't audit. Turn it off for
-  anything sensitive, internal, or already CORS-permissive.
+- **Whatever endpoint is set is a third party you don't fully control**
+  (unless you deployed it yourself — see below). The target URL, and
+  anything you send it (headers, body, Intruder payloads), passes through
+  it. Turn the toggle off for anything sensitive, internal, or already
+  CORS-permissive.
 - **It doesn't change Vuln Scan's honesty guarantee.** Header checks still
   only ever report "Present" when actually read, never a false "Missing" —
-  because whether corsproxy.io itself exposes the target's original
-  headers via `Access-Control-Expose-Headers` isn't something ZeitHawk can
-  verify, on or off.
-- **Method/header/body forwarding depends on corsproxy.io's own behavior**,
+  because whether the configured proxy itself exposes the target's
+  original headers via `Access-Control-Expose-Headers` isn't something
+  ZeitHawk can verify, on or off.
+- **Method/header/body forwarding depends on the proxy's own behavior**,
   not ZeitHawk's — if a request behaves differently proxied vs. direct,
   toggle it off and compare.
 - Recon's port-reachability check is deliberately **not** proxied: it uses
@@ -79,8 +96,19 @@ tradeoffs:
   through a proxy would only change the network vantage point, not fix
   anything.
 
-State persists per-browser via `localStorage`; nothing about the toggle
-itself is sent anywhere.
+**Default endpoint** is the public [corsproxy.io](https://corsproxy.io).
+A **Proxy endpoint** field beneath the toggle lets you point it at a
+private proxy instead — see `tools/zeithawk/cors-proxy-worker/` for a
+ready-to-deploy Cloudflare Worker that does the same job under your own
+account rather than a public third party. (A Google Apps Script web app
+*can't* fill this role: it has no way to set
+`Access-Control-Allow-Origin` on its own response at all, so a plain
+`fetch()` could never read what it returned — see
+`tools/apps-script-backend/Code.gs` for where that limitation is
+documented, from when that backend was built for a different purpose.)
+
+Both the on/off state and the endpoint persist per-browser via
+`localStorage`; nothing about the toggle itself is sent anywhere.
 
 **Authorized testing only.** Only point this at systems you own or have
 explicit permission to test.

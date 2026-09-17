@@ -1,0 +1,1073 @@
+<title>ZeitHawk</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Big+Shoulders:wght@600;700;800&family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+  :root{
+    --paper:#F2F4F6;
+    --paper-raised:#FFFFFF;
+    --paper-sunk:#E8EBEE;
+    --ink:#121924;
+    --ink-soft:#4B5563;
+    --line:#D8DEE4;
+    --line-soft:#E6EAEE;
+    --accent:#D97C33;
+    --accent-ink:#7A3E10;
+    --accent-soft:#FBE7D3;
+    --slate:#3E5C76;
+    --slate-soft:#E3EBF1;
+    --ok:#2F7D53;
+    --ok-soft:#DEEFE4;
+    --caution:#9C7A16;
+    --caution-soft:#F4E9C9;
+    --unknown:#5B6572;
+    --unknown-soft:#E7E9EC;
+    --restricted:#A73B33;
+    --restricted-soft:#F7DEDB;
+    --hawk-head:#D97C33;
+    --hawk-beak:#8A4A1E;
+    --hawk-eye:#1A1006;
+    --hawk-glint:#FFE8CF;
+    --shadow: 0 1px 2px rgba(18,25,36,0.06), 0 8px 24px -12px rgba(18,25,36,0.18);
+    --radius: 14px;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --paper:#0D1218;
+      --paper-raised:#161D26;
+      --paper-sunk:#10151C;
+      --ink:#E9EDF2;
+      --ink-soft:#9AA5B1;
+      --line:#2A3441;
+      --line-soft:#212933;
+      --accent:#E8944D;
+      --accent-ink:#FBD9B4;
+      --accent-soft:#3A2716;
+      --slate:#8FB0CC;
+      --slate-soft:#1B2733;
+      --ok:#6FBE93;
+      --ok-soft:#173323;
+      --caution:#D9BB5C;
+      --caution-soft:#332A11;
+      --unknown:#9AA5B1;
+      --unknown-soft:#1E2530;
+      --restricted:#E38078;
+      --restricted-soft:#3A1917;
+      --hawk-head:#E8944D;
+      --hawk-beak:#C97A3E;
+      --hawk-eye:#120A04;
+      --hawk-glint:#FFF2E0;
+      --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 12px 28px -14px rgba(0,0,0,0.6);
+    }
+  }
+  :root[data-theme="dark"]{
+    --paper:#0D1218;
+    --paper-raised:#161D26;
+    --paper-sunk:#10151C;
+    --ink:#E9EDF2;
+    --ink-soft:#9AA5B1;
+    --line:#2A3441;
+    --line-soft:#212933;
+    --accent:#E8944D;
+    --accent-ink:#FBD9B4;
+    --accent-soft:#3A2716;
+    --slate:#8FB0CC;
+    --slate-soft:#1B2733;
+    --ok:#6FBE93;
+    --ok-soft:#173323;
+    --caution:#D9BB5C;
+    --caution-soft:#332A11;
+    --unknown:#9AA5B1;
+    --unknown-soft:#1E2530;
+    --restricted:#E38078;
+    --restricted-soft:#3A1917;
+    --hawk-head:#E8944D;
+    --hawk-beak:#C97A3E;
+    --hawk-eye:#120A04;
+    --hawk-glint:#FFF2E0;
+    --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 12px 28px -14px rgba(0,0,0,0.6);
+  }
+
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'Public Sans', system-ui, -apple-system, sans-serif;
+    padding-inline:20px;
+    padding-block:32px;
+  }
+  .wrap{max-width:1180px;margin:0 auto;}
+
+  h1,h2,h3{font-family:'Big Shoulders','Public Sans',sans-serif;font-weight:800;text-transform:uppercase;letter-spacing:0.01em;text-wrap:balance;margin:0;}
+  .mono{font-family:'IBM Plex Mono',ui-monospace,monospace;}
+  code{font-family:'IBM Plex Mono',ui-monospace,monospace;background:var(--paper-sunk);padding:1px 5px;border-radius:4px;font-size:0.92em;}
+
+  /* header */
+  .app-header{display:flex;flex-direction:column;gap:6px;margin-bottom:24px;}
+  .eyebrow{font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:0.14em;text-transform:uppercase;color:var(--accent);display:flex;align-items:center;gap:8px;}
+  .eyebrow .dot{width:6px;height:6px;border-radius:50%;background:var(--accent);display:inline-block;}
+  .title-row{display:flex;align-items:center;gap:12px;}
+  .hawk-icon{height:clamp(34px,5.2vw,48px);width:auto;flex-shrink:0;filter:drop-shadow(0 2px 3px rgba(0,0,0,0.18));}
+  h1.title{font-size:clamp(28px,4.5vw,40px);line-height:1.05;color:var(--ink);}
+  .subtitle{color:var(--ink-soft);font-size:15px;max-width:74ch;line-height:1.5;margin-top:4px;}
+
+  .disclaimer{
+    display:flex;gap:10px;align-items:flex-start;
+    background:var(--restricted-soft);border:1px solid var(--restricted);border-radius:10px;
+    padding:12px 14px;font-size:13px;line-height:1.55;color:var(--ink);margin-top:16px;
+  }
+  .disclaimer strong{color:var(--restricted);}
+  .disclaimer code{background:var(--paper-raised);}
+
+  /* tab bar (reuses the wizard "console" instrument as a tool switcher) */
+  .console{
+    display:flex;align-items:stretch;gap:0;
+    margin:24px 0 20px;
+    border:1px solid var(--line);
+    border-radius:10px;
+    overflow:hidden;
+    background:var(--paper-raised);
+  }
+  .console .tick{
+    flex:1;
+    padding:11px 6px;
+    text-align:center;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11.5px;
+    letter-spacing:0.04em;
+    color:var(--ink-soft);
+    border-right:1px solid var(--line-soft);
+    background:transparent;
+    border-top:none;border-left:none;border-bottom:none;
+    cursor:pointer;
+    text-transform:uppercase;
+    display:flex;align-items:center;justify-content:center;gap:6px;
+  }
+  .console .tick:last-child{border-right:none;}
+  .console .tick:hover{color:var(--ink);background:var(--paper-sunk);}
+  .console .tick.active{color:var(--accent-ink);background:var(--accent-soft);font-weight:700;}
+  .console .tick .glyph{font-size:14px;}
+  @media (max-width:640px){
+    .console{flex-wrap:wrap;}
+    .console .tick{flex:1 1 33.33%;border-bottom:1px solid var(--line-soft);padding:9px 4px;font-size:10.5px;}
+  }
+
+  /* card shell */
+  .panel{
+    background:var(--paper-raised);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    box-shadow:var(--shadow);
+    padding:26px;
+  }
+  @media (max-width:560px){ .panel{padding:18px;} }
+
+  .tool-heading{display:flex;flex-direction:column;gap:4px;margin-bottom:20px;}
+  .tool-heading h2{font-size:clamp(19px,2.6vw,24px);}
+  .tool-heading p{margin:0;color:var(--ink-soft);font-size:13.5px;line-height:1.5;max-width:70ch;}
+
+  .field-label{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink-soft);margin-bottom:6px;display:block;}
+
+  input[type="text"],input[type="number"],input[type="url"],textarea,select{
+    font-family:'IBM Plex Mono',ui-monospace,monospace;
+    font-size:13px;
+    color:var(--ink);
+    background:var(--paper);
+    border:1px solid var(--line);
+    border-radius:8px;
+    padding:9px 11px;
+    width:100%;
+    outline:none;
+  }
+  input:focus-visible,textarea:focus-visible,select:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:1px;}
+  select{font-family:'Public Sans',sans-serif;font-weight:600;cursor:pointer;}
+  textarea{resize:vertical;line-height:1.5;}
+
+  .btn{
+    font-family:'Public Sans',sans-serif;
+    font-weight:700;
+    font-size:13.5px;
+    border-radius:8px;
+    padding:9px 16px;
+    cursor:pointer;
+    border:1px solid transparent;
+    white-space:nowrap;
+  }
+  .btn-primary{background:var(--ink);color:var(--paper);}
+  :root[data-theme="dark"] .btn-primary{background:var(--accent);color:#1A1006;}
+  @media (prefers-color-scheme:dark){ :root:not([data-theme="light"]) .btn-primary{background:var(--accent);color:#1A1006;} }
+  .btn-primary:disabled{opacity:0.45;cursor:not-allowed;}
+  .btn-ghost{background:transparent;color:var(--ink-soft);border-color:var(--line);}
+  .btn-ghost:hover{color:var(--ink);border-color:var(--slate);}
+  .btn-danger{background:transparent;color:var(--restricted);border-color:var(--restricted);}
+  .btn-danger:hover{background:var(--restricted-soft);}
+  .btn-sm{padding:5px 10px;font-size:12px;border-radius:6px;}
+
+  .workbench{display:grid;grid-template-columns:1fr 1fr;gap:22px;align-items:start;}
+  @media (max-width:900px){ .workbench{grid-template-columns:1fr;} }
+
+  .stack{display:flex;flex-direction:column;gap:14px;}
+  .row{display:flex;gap:10px;align-items:center;}
+  .row.wrap{flex-wrap:wrap;}
+  .method-url-row select{max-width:110px;flex:0 0 auto;}
+  .method-url-row input{flex:1;}
+
+  .kv-row{display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:center;margin-bottom:6px;}
+  .kv-row input{width:100%;}
+  .kv-remove{background:transparent;border:1px solid var(--line);color:var(--ink-soft);border-radius:6px;width:30px;height:30px;cursor:pointer;line-height:1;}
+  .kv-remove:hover{color:var(--restricted);border-color:var(--restricted);}
+  .kv-forbidden{font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--caution);margin:-2px 0 4px;}
+
+  .subpanel{background:var(--paper-sunk);border:1px solid var(--line-soft);border-radius:10px;padding:14px;}
+
+  .status-line{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-family:'IBM Plex Mono',monospace;font-size:13px;}
+  .status-pill{font-weight:700;padding:3px 10px;border-radius:6px;border:1px solid transparent;}
+  .status-2xx{background:var(--ok-soft);color:var(--ok);border-color:var(--ok);}
+  .status-3xx{background:var(--caution-soft);color:var(--caution);border-color:var(--caution);}
+  .status-4xx,.status-5xx,.status-err{background:var(--restricted-soft);color:var(--restricted);border-color:var(--restricted);}
+  .meta-chip{color:var(--ink-soft);}
+
+  pre.readout{
+    font-family:'IBM Plex Mono',monospace;font-size:12.5px;line-height:1.55;
+    background:var(--paper);border:1px solid var(--line-soft);border-radius:8px;
+    padding:12px;margin:0;max-height:280px;overflow:auto;white-space:pre-wrap;word-break:break-word;
+  }
+
+  .empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:48px 20px;text-align:center;color:var(--ink-soft);}
+  .empty-state .glyph{font-size:34px;color:var(--unknown);}
+  .empty-state p{margin:0;max-width:44ch;font-size:13.5px;line-height:1.5;}
+
+  table.results{width:100%;border-collapse:collapse;font-family:'IBM Plex Mono',monospace;font-size:12.5px;}
+  table.results th{text-align:left;font-size:10.5px;letter-spacing:0.06em;text-transform:uppercase;color:var(--ink-soft);padding:8px 10px;border-bottom:1px solid var(--line);cursor:pointer;user-select:none;}
+  table.results th:hover{color:var(--ink);}
+  table.results td{padding:7px 10px;border-bottom:1px solid var(--line-soft);}
+  table.results tbody tr{cursor:pointer;}
+  table.results tbody tr:hover{background:var(--paper-sunk);}
+  .results-wrap{overflow-x:auto;border:1px solid var(--line-soft);border-radius:8px;}
+  .status-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;}
+  .dot-ok{background:var(--ok);} .dot-caution{background:var(--caution);} .dot-restricted{background:var(--restricted);}
+
+  .pill{
+    font-family:'IBM Plex Mono',monospace;font-size:11.5px;letter-spacing:0.03em;padding:5px 10px;border-radius:999px;
+    background:var(--slate-soft);color:var(--slate);border:1px solid var(--line);
+  }
+  .pill-ok{background:var(--ok-soft);color:var(--ok);border-color:var(--ok);}
+  .pill-restricted{background:var(--restricted-soft);color:var(--restricted);border-color:var(--restricted);}
+
+  .op-group{display:flex;flex-direction:column;gap:8px;margin-bottom:16px;}
+  .op-group h4{font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink-soft);margin:0;font-weight:600;}
+  .op-buttons{display:flex;flex-wrap:wrap;gap:6px;}
+
+  .diff-view{font-family:'IBM Plex Mono',monospace;font-size:12.5px;line-height:1.6;background:var(--paper);border:1px solid var(--line-soft);border-radius:8px;padding:4px 0;max-height:420px;overflow:auto;}
+  .diff-line{display:flex;gap:10px;padding:1px 12px;white-space:pre-wrap;word-break:break-word;}
+  .diff-line .gutter{flex:0 0 14px;color:var(--ink-soft);user-select:none;}
+  .diff-line.add{background:var(--ok-soft);}
+  .diff-line.add .gutter{color:var(--ok);}
+  .diff-line.del{background:var(--restricted-soft);}
+  .diff-line.del .gutter{color:var(--restricted);}
+
+  .history-row{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;border:1px solid var(--line-soft);border-radius:10px;padding:12px 14px;background:var(--paper-raised);cursor:pointer;margin-bottom:8px;}
+  .history-row:hover{border-color:var(--slate);}
+  .history-main{display:flex;align-items:center;gap:10px;min-width:0;}
+  .history-url{font-family:'IBM Plex Mono',monospace;font-size:12.5px;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:52ch;}
+  .history-method{font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:700;color:var(--slate);flex:0 0 auto;}
+  .history-time{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink-soft);flex:0 0 auto;}
+
+  .hint{font-size:12px;color:var(--ink-soft);line-height:1.5;margin:0;}
+  [hidden]{display:none!important;}
+
+  .footer-note{margin-top:36px;padding-top:18px;border-top:1px solid var(--line);color:var(--unknown);font-size:12px;font-family:'IBM Plex Mono',monospace;text-align:center;line-height:1.6;}
+</style>
+
+<div class="wrap">
+  <header class="app-header">
+    <span class="eyebrow"><span class="dot"></span>Zeitview · Security Tooling</span>
+    <div class="title-row">
+      <svg class="hawk-icon" viewBox="0 0 120 100" role="img" aria-label="ZeitHawk icon">
+        <ellipse cx="36" cy="46" rx="32" ry="30" fill="var(--hawk-head)"/>
+        <polygon points="52,16 120,36 54,60" fill="var(--hawk-head)"/>
+        <polygon points="106,28 120,36 96,54" fill="var(--hawk-beak)"/>
+        <polygon points="18,20 48,14 36,30" fill="var(--hawk-beak)"/>
+        <circle cx="34" cy="33" r="6" fill="var(--hawk-eye)"/>
+        <circle cx="32" cy="31" r="1.9" fill="var(--hawk-glint)"/>
+      </svg>
+      <h1 class="title">ZeitHawk</h1>
+    </div>
+    <p class="subtitle">Craft, replay, and fuzz HTTP requests, then decode, hash, and diff what comes back — a lightweight, browser-only toolkit built in the spirit of Burp Suite's core tools: Repeater, Intruder, Decoder, and Comparer.</p>
+    <div class="disclaimer">
+      <span aria-hidden="true">⚠</span>
+      <span>
+        <strong>Authorized testing only</strong> — only point this at systems you own or are explicitly authorized to test. Every request runs from your browser, so it's bound by the same CORS rules as any web page: the target must allow cross-origin access for you to see its status, headers, or body here, and browsers never let a page override <code>Host</code>, <code>Cookie</code>, <code>Origin</code>, or a handful of other headers. Nothing you enter leaves your browser except the requests you explicitly send.
+      </span>
+    </div>
+  </header>
+
+  <nav id="tabbar" class="console" role="tablist" aria-label="Workbench tools"></nav>
+
+  <main id="stage">
+
+    <!-- ============ REPEATER ============ -->
+    <section id="tool-repeater" class="tool-section panel">
+      <div class="tool-heading">
+        <h2>Repeater</h2>
+        <p>Build one HTTP request, send it, inspect the response, tweak, resend. Every send is logged to History.</p>
+      </div>
+      <div class="workbench">
+        <div class="stack">
+          <div class="row method-url-row">
+            <select id="rep-method">
+              <option>GET</option><option>POST</option><option>PUT</option><option>PATCH</option><option>DELETE</option><option>HEAD</option><option>OPTIONS</option>
+            </select>
+            <input id="rep-url" type="url" placeholder="https://api.example.com/resource" />
+          </div>
+          <div>
+            <span class="field-label">Headers</span>
+            <div id="rep-headers"></div>
+            <button type="button" class="btn btn-ghost btn-sm" id="rep-add-header">+ Add header</button>
+          </div>
+          <div>
+            <span class="field-label">Body</span>
+            <textarea id="rep-body" rows="6" placeholder="Request body (JSON, form data, etc.) — used for methods that carry one"></textarea>
+          </div>
+          <div class="row wrap">
+            <button type="button" class="btn btn-primary" id="rep-send">Send request</button>
+            <button type="button" class="btn btn-ghost" id="rep-clear">Clear</button>
+            <button type="button" class="btn btn-ghost" id="rep-to-intruder">Send to Intruder →</button>
+          </div>
+          <p class="hint">Tip: click any row in <strong>History</strong> to reload it here for another pass.</p>
+        </div>
+        <div class="stack">
+          <div class="subpanel stack" id="rep-response">
+            <div class="empty-state">
+              <span class="glyph">↻</span>
+              <p>Send a request to see its status, headers, and body here.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ INTRUDER ============ -->
+    <section id="tool-intruder" class="tool-section panel" hidden>
+      <div class="tool-heading">
+        <h2>Intruder</h2>
+        <p>Mark an injection point with <code>§inject§</code> anywhere in the URL, a header, or the body — each payload below is substituted in, one request per line, and the results land in the table.</p>
+      </div>
+      <div class="workbench">
+        <div class="stack">
+          <div class="row method-url-row">
+            <select id="int-method">
+              <option>GET</option><option>POST</option><option>PUT</option><option>PATCH</option><option>DELETE</option>
+            </select>
+            <input id="int-url" type="url" placeholder="https://api.example.com/resource?id=§inject§" />
+          </div>
+          <div>
+            <span class="field-label">Headers</span>
+            <div id="int-headers"></div>
+            <button type="button" class="btn btn-ghost btn-sm" id="int-add-header">+ Add header</button>
+          </div>
+          <div>
+            <span class="field-label">Body</span>
+            <textarea id="int-body" rows="4" placeholder="Optional body — can also contain §inject§"></textarea>
+          </div>
+          <div>
+            <span class="field-label">Payload set</span>
+            <select id="int-preset">
+              <option value="custom">Custom (edit list below)</option>
+              <option value="numeric">Numeric range 1–10</option>
+              <option value="usernames">Common usernames</option>
+              <option value="sqli">SQL injection probes</option>
+              <option value="xss">XSS probes</option>
+              <option value="traversal">Path traversal probes</option>
+            </select>
+          </div>
+          <div>
+            <span class="field-label">Payloads (one per line)</span>
+            <textarea id="int-payloads" rows="6"></textarea>
+          </div>
+          <div class="row wrap">
+            <label class="field-label" style="margin:0;" for="int-delay">Delay (ms)</label>
+            <input id="int-delay" type="number" min="0" max="5000" value="300" style="width:90px;" />
+            <span class="hint">Capped at 200 payloads per run, sequential requests only — this is a manual review aid, not a load tool.</span>
+          </div>
+          <div class="row wrap">
+            <button type="button" class="btn btn-primary" id="int-start">Start attack</button>
+            <button type="button" class="btn btn-danger" id="int-stop" disabled>Stop</button>
+            <span class="mono hint" id="int-progress"></span>
+          </div>
+        </div>
+        <div class="stack">
+          <div class="results-wrap">
+            <table class="results" id="int-table">
+              <thead>
+                <tr>
+                  <th data-sort="idx">#</th>
+                  <th data-sort="payload">Payload</th>
+                  <th data-sort="status">Status</th>
+                  <th data-sort="length">Length</th>
+                  <th data-sort="ms">Time</th>
+                </tr>
+              </thead>
+              <tbody id="int-tbody"></tbody>
+            </table>
+          </div>
+          <div id="int-detail"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ DECODER ============ -->
+    <section id="tool-decoder" class="tool-section panel" hidden>
+      <div class="tool-heading">
+        <h2>Decoder</h2>
+        <p>Transform text between encodings, or hash it. Chain transforms by sending the output back in as input.</p>
+      </div>
+      <div class="workbench">
+        <div class="stack">
+          <span class="field-label">Input</span>
+          <textarea id="dec-input" rows="10"></textarea>
+        </div>
+        <div class="stack">
+          <div class="op-group">
+            <h4>Base64</h4>
+            <div class="op-buttons">
+              <button type="button" class="btn btn-ghost btn-sm" data-op="b64enc">Encode</button>
+              <button type="button" class="btn btn-ghost btn-sm" data-op="b64dec">Decode</button>
+            </div>
+          </div>
+          <div class="op-group">
+            <h4>URL</h4>
+            <div class="op-buttons">
+              <button type="button" class="btn btn-ghost btn-sm" data-op="urlenc">Encode</button>
+              <button type="button" class="btn btn-ghost btn-sm" data-op="urldec">Decode</button>
+            </div>
+          </div>
+          <div class="op-group">
+            <h4>HTML entities</h4>
+            <div class="op-buttons">
+              <button type="button" class="btn btn-ghost btn-sm" data-op="htmlenc">Encode</button>
+              <button type="button" class="btn btn-ghost btn-sm" data-op="htmldec">Decode</button>
+            </div>
+          </div>
+          <div class="op-group">
+            <h4>Hex</h4>
+            <div class="op-buttons">
+              <button type="button" class="btn btn-ghost btn-sm" data-op="hexenc">Encode</button>
+              <button type="button" class="btn btn-ghost btn-sm" data-op="hexdec">Decode</button>
+            </div>
+          </div>
+          <div class="op-group">
+            <h4>Unicode escape</h4>
+            <div class="op-buttons">
+              <button type="button" class="btn btn-ghost btn-sm" data-op="unienc">Encode</button>
+              <button type="button" class="btn btn-ghost btn-sm" data-op="unidec">Decode</button>
+            </div>
+          </div>
+          <div class="op-group">
+            <h4>JWT</h4>
+            <div class="op-buttons">
+              <button type="button" class="btn btn-ghost btn-sm" data-op="jwtdec">Decode (unverified)</button>
+            </div>
+          </div>
+          <div class="op-group">
+            <h4>Hash (of input, hex digest)</h4>
+            <div class="op-buttons">
+              <button type="button" class="btn btn-ghost btn-sm" data-op="sha1">SHA-1</button>
+              <button type="button" class="btn btn-ghost btn-sm" data-op="sha256">SHA-256</button>
+              <button type="button" class="btn btn-ghost btn-sm" data-op="sha384">SHA-384</button>
+              <button type="button" class="btn btn-ghost btn-sm" data-op="sha512">SHA-512</button>
+            </div>
+          </div>
+          <div>
+            <div class="row" style="justify-content:space-between;">
+              <span class="field-label" style="margin-bottom:0;">Output</span>
+              <button type="button" class="btn btn-ghost btn-sm" id="dec-chain">↓ Use output as input</button>
+            </div>
+            <textarea id="dec-output" rows="8" readonly></textarea>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ COMPARER ============ -->
+    <section id="tool-comparer" class="tool-section panel" hidden>
+      <div class="tool-heading">
+        <h2>Comparer</h2>
+        <p>Line-by-line diff between two pieces of text — two responses, two tokens, two config dumps.</p>
+      </div>
+      <div class="workbench">
+        <div class="stack">
+          <span class="field-label">A (original)</span>
+          <textarea id="cmp-a" rows="10"></textarea>
+        </div>
+        <div class="stack">
+          <span class="field-label">B (modified)</span>
+          <textarea id="cmp-b" rows="10"></textarea>
+        </div>
+      </div>
+      <div class="row wrap" style="margin-top:14px;">
+        <button type="button" class="btn btn-primary" id="cmp-run">Compare</button>
+        <span id="cmp-summary" class="row wrap"></span>
+      </div>
+      <div class="diff-view" id="cmp-output" style="margin-top:14px;"></div>
+    </section>
+
+    <!-- ============ HISTORY ============ -->
+    <section id="tool-history" class="tool-section panel" hidden>
+      <div class="tool-heading">
+        <h2>History</h2>
+        <p>Every request sent from Repeater or Intruder, newest first. Click one to reload it into Repeater.</p>
+      </div>
+      <div class="row wrap" style="justify-content:flex-end;margin-bottom:12px;">
+        <button type="button" class="btn btn-danger btn-sm" id="hist-clear">Clear history</button>
+      </div>
+      <div id="hist-list"></div>
+    </section>
+
+  </main>
+
+  <div class="footer-note">RUNS ENTIRELY CLIENT-SIDE · NOTHING IS SENT ANYWHERE EXCEPT REQUESTS YOU EXPLICITLY FIRE · v1.0</div>
+</div>
+
+<script>
+(function(){
+
+/* ------------------------------------------------------------------ *
+ * Shared helpers
+ * ------------------------------------------------------------------ */
+
+const FORBIDDEN_HEADERS = new Set([
+  'accept-charset','accept-encoding','access-control-request-headers','access-control-request-method',
+  'connection','content-length','cookie','cookie2','date','dnt','expect','host','keep-alive',
+  'origin','referer','set-cookie','te','trailer','transfer-encoding','upgrade','via'
+]);
+function isForbiddenHeader(name){
+  const n = (name||'').trim().toLowerCase();
+  if(!n) return false;
+  if(FORBIDDEN_HEADERS.has(n)) return true;
+  return n.startsWith('proxy-') || n.startsWith('sec-');
+}
+
+function escapeHtml(str){ const d=document.createElement('div'); d.textContent = String(str); return d.innerHTML; }
+
+function statusClass(status){
+  if(status == null) return 'status-err';
+  if(status >= 200 && status < 300) return 'status-2xx';
+  if(status >= 300 && status < 400) return 'status-3xx';
+  return 'status-4xx';
+}
+function dotClass(status){
+  if(status == null) return 'dot-restricted';
+  if(status >= 200 && status < 300) return 'dot-ok';
+  if(status >= 300 && status < 400) return 'dot-caution';
+  return 'dot-restricted';
+}
+
+// Fires a request from the browser and normalizes the outcome. Subject to
+// the same CORS/forbidden-header rules as any page — see the banner above.
+async function fireRequest(method, url, headerRows, body){
+  const headers = {};
+  const skipped = [];
+  (headerRows||[]).forEach(h=>{
+    if(!h.k) return;
+    if(isForbiddenHeader(h.k)){ skipped.push(h.k); return; }
+    headers[h.k] = h.v;
+  });
+  const opts = { method, headers, mode:'cors', credentials:'omit' };
+  if(body && !['GET','HEAD'].includes(method)) opts.body = body;
+  const t0 = performance.now();
+  try{
+    const res = await fetch(url, opts);
+    const text = await res.text();
+    const ms = Math.round(performance.now() - t0);
+    const outHeaders = [];
+    res.headers.forEach((v,k)=>outHeaders.push([k,v]));
+    return { ok:true, status:res.status, statusText:res.statusText, headers:outHeaders, body:text, ms, size:text.length, skipped };
+  }catch(err){
+    const ms = Math.round(performance.now() - t0);
+    return { ok:false, status:null, statusText:null, error:(err && err.message) || String(err), ms, size:0, skipped };
+  }
+}
+
+function saveHistoryEntry(entry){
+  try{
+    const raw = localStorage.getItem('httpworkbench_history_v1');
+    const list = raw ? JSON.parse(raw) : [];
+    list.unshift(entry);
+    while(list.length > 150) list.pop();
+    localStorage.setItem('httpworkbench_history_v1', JSON.stringify(list));
+  }catch(e){ /* storage unavailable — history just won't persist */ }
+}
+function loadHistory(){
+  try{
+    const raw = localStorage.getItem('httpworkbench_history_v1');
+    return raw ? JSON.parse(raw) : [];
+  }catch(e){ return []; }
+}
+function clearHistory(){
+  try{ localStorage.removeItem('httpworkbench_history_v1'); }catch(e){}
+}
+
+/* ------------------------------------------------------------------ *
+ * Tab bar
+ * ------------------------------------------------------------------ */
+
+const TOOLS = [
+  { id:'repeater', glyph:'↻', label:'Repeater' },
+  { id:'intruder', glyph:'⌖', label:'Intruder' },
+  { id:'decoder', glyph:'⌬', label:'Decoder' },
+  { id:'comparer', glyph:'⇅', label:'Comparer' },
+  { id:'history', glyph:'◷', label:'History' },
+];
+const tabbar = document.getElementById('tabbar');
+TOOLS.forEach(t=>{
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'tick';
+  btn.setAttribute('role','tab');
+  btn.dataset.tool = t.id;
+  btn.innerHTML = '<span class="glyph">'+t.glyph+'</span><span>'+t.label+'</span>';
+  btn.addEventListener('click', ()=>selectTool(t.id));
+  tabbar.appendChild(btn);
+});
+function selectTool(id){
+  TOOLS.forEach(t=>{
+    document.getElementById('tool-'+t.id).hidden = (t.id !== id);
+  });
+  Array.from(tabbar.children).forEach(btn=>{
+    btn.classList.toggle('active', btn.dataset.tool === id);
+  });
+  if(id === 'history') renderHistory();
+  try{ localStorage.setItem('httpworkbench_last_tab', id); }catch(e){}
+}
+let initialTab = 'repeater';
+try{ initialTab = localStorage.getItem('httpworkbench_last_tab') || 'repeater'; }catch(e){}
+if(!TOOLS.some(t=>t.id===initialTab)) initialTab = 'repeater';
+selectTool(initialTab);
+
+/* ------------------------------------------------------------------ *
+ * Header-row editor (shared widget for Repeater + Intruder)
+ * ------------------------------------------------------------------ */
+
+function makeHeaderEditor(containerId, initialRows){
+  const container = document.getElementById(containerId);
+  let rows = initialRows.map(r=>({k:r[0], v:r[1]}));
+  function render(){
+    container.innerHTML = '';
+    rows.forEach((row, i)=>{
+      if(isForbiddenHeader(row.k)){
+        const w = document.createElement('div');
+        w.className = 'kv-forbidden';
+        w.textContent = '⚠ "'+row.k+'" can\'t be set from a browser — it will be skipped when sent.';
+        container.appendChild(w);
+      }
+      const line = document.createElement('div');
+      line.className = 'kv-row';
+      const kInput = document.createElement('input');
+      kInput.type = 'text'; kInput.placeholder = 'Header'; kInput.value = row.k;
+      kInput.addEventListener('input', ()=>{ row.k = kInput.value; });
+      const vInput = document.createElement('input');
+      vInput.type = 'text'; vInput.placeholder = 'Value'; vInput.value = row.v;
+      vInput.addEventListener('input', ()=>{ row.v = vInput.value; });
+      const rm = document.createElement('button');
+      rm.type = 'button'; rm.className = 'kv-remove'; rm.textContent = '×';
+      rm.addEventListener('click', ()=>{ rows.splice(i,1); render(); });
+      line.appendChild(kInput); line.appendChild(vInput); line.appendChild(rm);
+      container.appendChild(line);
+    });
+  }
+  render();
+  return {
+    getRows: ()=> rows.filter(r=>r.k),
+    addRow: ()=>{ rows.push({k:'',v:''}); render(); },
+    setRows: (newRows)=>{ rows = newRows.map(r=>({k:r[0],v:r[1]})); render(); },
+  };
+}
+
+/* ------------------------------------------------------------------ *
+ * REPEATER
+ * ------------------------------------------------------------------ */
+
+const repHeaders = makeHeaderEditor('rep-headers', [['Accept','application/json']]);
+document.getElementById('rep-add-header').addEventListener('click', ()=>repHeaders.addRow());
+document.getElementById('rep-url').value = 'https://httpbin.org/get';
+
+function renderResponse(container, result, method, url){
+  container.innerHTML = '';
+  if(!result.ok){
+    const err = document.createElement('div');
+    err.className = 'status-line';
+    err.innerHTML = '<span class="status-pill status-err">NETWORK / CORS ERROR</span><span class="meta-chip">'+escapeHtml(result.ms)+' ms</span>';
+    const msg = document.createElement('p');
+    msg.className = 'hint';
+    msg.style.marginTop = '8px';
+    msg.textContent = result.error + ' — most often this means the target blocked the cross-origin request, is unreachable, or the URL is invalid.';
+    container.appendChild(err); container.appendChild(msg);
+    return;
+  }
+  const statusRow = document.createElement('div');
+  statusRow.className = 'status-line';
+  statusRow.innerHTML =
+    '<span class="status-pill '+statusClass(result.status)+'">'+result.status+' '+escapeHtml(result.statusText||'')+'</span>'+
+    '<span class="meta-chip">'+result.ms+' ms</span>'+
+    '<span class="meta-chip">'+result.size+' bytes</span>';
+  container.appendChild(statusRow);
+
+  if(result.skipped && result.skipped.length){
+    const w = document.createElement('p');
+    w.className = 'hint';
+    w.textContent = 'Skipped (browser-restricted): ' + result.skipped.join(', ');
+    container.appendChild(w);
+  }
+
+  const hLabel = document.createElement('span'); hLabel.className='field-label'; hLabel.style.marginTop='6px'; hLabel.textContent='Response headers';
+  container.appendChild(hLabel);
+  const hPre = document.createElement('pre'); hPre.className = 'readout'; hPre.style.maxHeight = '140px';
+  hPre.textContent = result.headers.length
+    ? result.headers.map(([k,v])=>k+': '+v).join('\n')
+    : '(none exposed cross-origin — the target needs Access-Control-Expose-Headers to reveal more here)';
+  container.appendChild(hPre);
+
+  const bLabel = document.createElement('span'); bLabel.className='field-label'; bLabel.style.marginTop='6px'; bLabel.textContent='Response body';
+  container.appendChild(bLabel);
+  const bPre = document.createElement('pre'); bPre.className = 'readout';
+  let bodyText = result.body;
+  try{ bodyText = JSON.stringify(JSON.parse(result.body), null, 2); }catch(e){ /* not JSON, leave as-is */ }
+  bPre.textContent = bodyText || '(empty body)';
+  container.appendChild(bPre);
+}
+
+document.getElementById('rep-send').addEventListener('click', async ()=>{
+  const method = document.getElementById('rep-method').value;
+  const url = document.getElementById('rep-url').value.trim();
+  const body = document.getElementById('rep-body').value;
+  const headerRows = repHeaders.getRows();
+  const container = document.getElementById('rep-response');
+  if(!url){ container.innerHTML = '<p class="hint">Enter a URL first.</p>'; return; }
+  const btn = document.getElementById('rep-send');
+  btn.disabled = true; btn.textContent = 'Sending…';
+  container.innerHTML = '<p class="hint">Sending…</p>';
+  const result = await fireRequest(method, url, headerRows, body);
+  renderResponse(container, result, method, url);
+  saveHistoryEntry({
+    id: Date.now()+'-'+Math.random().toString(36).slice(2),
+    ts: Date.now(), method, url,
+    headers: headerRows.map(r=>[r.k,r.v]), body,
+    status: result.status, statusText: result.statusText, ms: result.ms, error: result.error||null,
+  });
+  btn.disabled = false; btn.textContent = 'Send request';
+});
+
+document.getElementById('rep-clear').addEventListener('click', ()=>{
+  document.getElementById('rep-url').value = '';
+  document.getElementById('rep-body').value = '';
+  repHeaders.setRows([]);
+  document.getElementById('rep-response').innerHTML = '<div class="empty-state"><span class="glyph">↻</span><p>Send a request to see its status, headers, and body here.</p></div>';
+});
+
+document.getElementById('rep-to-intruder').addEventListener('click', ()=>{
+  document.getElementById('int-method').value = document.getElementById('rep-method').value;
+  document.getElementById('int-url').value = document.getElementById('rep-url').value;
+  document.getElementById('int-body').value = document.getElementById('rep-body').value;
+  intHeaders.setRows(repHeaders.getRows().map(r=>[r.k,r.v]));
+  selectTool('intruder');
+});
+
+/* ------------------------------------------------------------------ *
+ * INTRUDER
+ * ------------------------------------------------------------------ */
+
+const intHeaders = makeHeaderEditor('int-headers', [['Accept','application/json']]);
+document.getElementById('int-add-header').addEventListener('click', ()=>intHeaders.addRow());
+document.getElementById('int-url').value = 'https://httpbin.org/get?id=§inject§';
+
+const PRESETS = {
+  numeric: Array.from({length:10}, (_,i)=>String(i+1)).join('\n'),
+  usernames: ['admin','administrator','root','test','guest','service','support','backup','demo','user'].join('\n'),
+  sqli: ["' OR '1'='1", "' OR 1=1--", "\" OR \"1\"=\"1", "1' AND '1'='1", "'; DROP TABLE users--", "1 OR 1=1"].join('\n'),
+  xss: ['<script>alert(1)<\/script>', '"><img src=x onerror=alert(1)>', "'><svg onload=alert(1)>", '<img src=x onerror=alert(document.domain)>'].join('\n'),
+  traversal: ['../../../../etc/passwd', '..%2f..%2f..%2fetc%2fpasswd', '....//....//etc/passwd', '/etc/passwd'].join('\n'),
+};
+document.getElementById('int-preset').value = 'numeric';
+document.getElementById('int-payloads').value = PRESETS.numeric;
+document.getElementById('int-preset').addEventListener('change', (e)=>{
+  const v = e.target.value;
+  if(PRESETS[v]) document.getElementById('int-payloads').value = PRESETS[v];
+});
+
+let intruderResults = [];
+let intruderStopFlag = false;
+let intruderSort = { key:'idx', dir:1 };
+
+function renderIntruderTable(){
+  const tbody = document.getElementById('int-tbody');
+  const sorted = intruderResults.slice().sort((a,b)=>{
+    const k = intruderSort.key;
+    let av = a[k], bv = b[k];
+    if(av == null) av = -1; if(bv == null) bv = -1;
+    if(typeof av === 'string') return av.localeCompare(bv) * intruderSort.dir;
+    return (av - bv) * intruderSort.dir;
+  });
+  tbody.innerHTML = '';
+  sorted.forEach(r=>{
+    const tr = document.createElement('tr');
+    tr.innerHTML =
+      '<td>'+r.idx+'</td>'+
+      '<td class="mono" title="'+escapeHtml(r.payload)+'">'+escapeHtml(r.payload.length>40 ? r.payload.slice(0,40)+'…' : r.payload)+'</td>'+
+      '<td><span class="status-dot '+dotClass(r.status)+'"></span>'+(r.status ?? 'ERR')+'</td>'+
+      '<td>'+r.length+'</td>'+
+      '<td>'+r.ms+'</td>';
+    tr.addEventListener('click', ()=>showIntruderDetail(r));
+    tbody.appendChild(tr);
+  });
+}
+function showIntruderDetail(r){
+  const el = document.getElementById('int-detail');
+  el.innerHTML = '';
+  const label = document.createElement('span'); label.className='field-label'; label.textContent='Response body — payload: '+r.payload;
+  const pre = document.createElement('pre'); pre.className='readout';
+  let bodyText = r.body || '';
+  try{ bodyText = JSON.stringify(JSON.parse(r.body), null, 2); }catch(e){}
+  pre.textContent = r.error ? ('Error: '+r.error) : (bodyText || '(empty body)');
+  el.appendChild(label); el.appendChild(pre);
+}
+document.querySelectorAll('#int-table th[data-sort]').forEach(th=>{
+  th.addEventListener('click', ()=>{
+    const key = th.dataset.sort;
+    intruderSort.dir = (intruderSort.key === key) ? -intruderSort.dir : 1;
+    intruderSort.key = key;
+    renderIntruderTable();
+  });
+});
+
+document.getElementById('int-start').addEventListener('click', async ()=>{
+  const method = document.getElementById('int-method').value;
+  const urlTpl = document.getElementById('int-url').value.trim();
+  const bodyTpl = document.getElementById('int-body').value;
+  const headerTpl = intHeaders.getRows();
+  const delay = Math.max(0, parseInt(document.getElementById('int-delay').value, 10) || 0);
+  let payloads = document.getElementById('int-payloads').value.split('\n').map(s=>s.trim()).filter(Boolean);
+  if(!urlTpl){ return; }
+  if(payloads.length === 0){ return; }
+  if(payloads.length > 200){ payloads = payloads.slice(0,200); }
+
+  intruderResults = [];
+  renderIntruderTable();
+  document.getElementById('int-detail').innerHTML = '';
+  intruderStopFlag = false;
+  document.getElementById('int-start').disabled = true;
+  document.getElementById('int-stop').disabled = false;
+
+  for(let i=0; i<payloads.length; i++){
+    if(intruderStopFlag) break;
+    const payload = payloads[i];
+    const url = urlTpl.split('§inject§').join(encodeURIComponent(payload));
+    const body = bodyTpl.split('§inject§').join(payload);
+    const headers = headerTpl.map(h=>({k:h.k, v: (h.v||'').split('§inject§').join(payload)}));
+    document.getElementById('int-progress').textContent = 'Sent '+i+' / '+payloads.length;
+    const result = await fireRequest(method, url, headers, body);
+    intruderResults.push({
+      idx: i+1, payload,
+      status: result.status, length: result.size, ms: result.ms,
+      body: result.body, error: result.error || null,
+    });
+    renderIntruderTable();
+    if(delay > 0 && i < payloads.length-1) await new Promise(r=>setTimeout(r, delay));
+  }
+  document.getElementById('int-progress').textContent = 'Done — '+intruderResults.length+' / '+payloads.length+' sent';
+  document.getElementById('int-start').disabled = false;
+  document.getElementById('int-stop').disabled = true;
+});
+document.getElementById('int-stop').addEventListener('click', ()=>{ intruderStopFlag = true; });
+
+/* ------------------------------------------------------------------ *
+ * DECODER
+ * ------------------------------------------------------------------ */
+
+function b64Encode(str){ return btoa(unescape(encodeURIComponent(str))); }
+function b64Decode(str){ return decodeURIComponent(escape(atob(str.trim()))); }
+function b64urlDecodeRaw(s){
+  s = s.replace(/-/g,'+').replace(/_/g,'/');
+  while(s.length % 4) s += '=';
+  return b64Decode(s);
+}
+const HTML_NAMED_ENC = {'&':'amp','<':'lt','>':'gt','"':'quot',"'":'#39'};
+function htmlEncode(str){ return str.replace(/[&<>"']/g, ch=>'&'+HTML_NAMED_ENC[ch]+';'); }
+function htmlDecode(str){
+  const named = {amp:'&',lt:'<',gt:'>',quot:'"',apos:"'",nbsp:' '};
+  return str.replace(/&(#x[0-9a-fA-F]+|#[0-9]+|[a-zA-Z]+);/g, (m, ent)=>{
+    if(ent[0]==='#'){
+      const cp = (ent[1]==='x'||ent[1]==='X') ? parseInt(ent.slice(2),16) : parseInt(ent.slice(1),10);
+      return isNaN(cp) ? m : String.fromCodePoint(cp);
+    }
+    return Object.prototype.hasOwnProperty.call(named, ent) ? named[ent] : m;
+  });
+}
+function hexEncode(str){ return Array.from(new TextEncoder().encode(str)).map(b=>b.toString(16).padStart(2,'0')).join(' '); }
+function hexDecode(str){
+  const clean = str.replace(/[^0-9a-fA-F]/g,'');
+  if(clean.length % 2) throw new Error('Odd number of hex digits');
+  const bytes = new Uint8Array(clean.length/2);
+  for(let i=0;i<bytes.length;i++) bytes[i] = parseInt(clean.substr(i*2,2),16);
+  return new TextDecoder().decode(bytes);
+}
+function unicodeEscape(str){
+  return Array.from(str).map(ch=>{
+    const cp = ch.codePointAt(0);
+    return (cp>126||cp<32) ? '\\u'+cp.toString(16).padStart(4,'0') : ch;
+  }).join('');
+}
+function unicodeUnescape(str){ return str.replace(/\\u([0-9a-fA-F]{4})/g, (m,h)=>String.fromCharCode(parseInt(h,16))); }
+function decodeJwt(token){
+  const parts = token.trim().split('.');
+  if(parts.length < 2) throw new Error('Not a JWT — expected header.payload.signature');
+  const header = JSON.parse(b64urlDecodeRaw(parts[0]));
+  const payload = JSON.parse(b64urlDecodeRaw(parts[1]));
+  let out = 'HEADER:\n'+JSON.stringify(header,null,2)+'\n\nPAYLOAD:\n'+JSON.stringify(payload,null,2);
+  if(parts[2]) out += '\n\n(signature not verified — this is a decode-only view)';
+  return out;
+}
+async function shaHash(algo, str){
+  const buf = await crypto.subtle.digest(algo, new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+
+const decInput = document.getElementById('dec-input');
+const decOutput = document.getElementById('dec-output');
+async function runOp(op){
+  const input = decInput.value;
+  try{
+    let out;
+    switch(op){
+      case 'b64enc': out = b64Encode(input); break;
+      case 'b64dec': out = b64Decode(input); break;
+      case 'urlenc': out = encodeURIComponent(input); break;
+      case 'urldec': out = decodeURIComponent(input); break;
+      case 'htmlenc': out = htmlEncode(input); break;
+      case 'htmldec': out = htmlDecode(input); break;
+      case 'hexenc': out = hexEncode(input); break;
+      case 'hexdec': out = hexDecode(input); break;
+      case 'unienc': out = unicodeEscape(input); break;
+      case 'unidec': out = unicodeUnescape(input); break;
+      case 'jwtdec': out = decodeJwt(input); break;
+      case 'sha1': out = await shaHash('SHA-1', input); break;
+      case 'sha256': out = await shaHash('SHA-256', input); break;
+      case 'sha384': out = await shaHash('SHA-384', input); break;
+      case 'sha512': out = await shaHash('SHA-512', input); break;
+      default: out = '';
+    }
+    decOutput.value = out;
+  }catch(err){
+    decOutput.value = 'Error: ' + (err && err.message ? err.message : String(err));
+  }
+}
+document.querySelectorAll('[data-op]').forEach(btn=>{
+  btn.addEventListener('click', ()=>runOp(btn.dataset.op));
+});
+document.getElementById('dec-chain').addEventListener('click', ()=>{
+  decInput.value = decOutput.value;
+});
+// Resting-state demo, computed live so it's always correct.
+decInput.value = 'Authorized testing only.';
+runOp('b64enc');
+
+/* ------------------------------------------------------------------ *
+ * COMPARER
+ * ------------------------------------------------------------------ */
+
+function diffLines(a, b){
+  const A = a.split('\n'), B = b.split('\n');
+  const n = A.length, m = B.length;
+  if(n*m > 4000000){
+    return null; // too large for an in-browser O(n*m) diff
+  }
+  const dp = Array.from({length:n+1}, ()=> new Int32Array(m+1));
+  for(let i=n-1;i>=0;i--){
+    for(let j=m-1;j>=0;j--){
+      dp[i][j] = (A[i]===B[j]) ? dp[i+1][j+1]+1 : Math.max(dp[i+1][j], dp[i][j+1]);
+    }
+  }
+  const ops = []; let i=0, j=0;
+  while(i<n && j<m){
+    if(A[i]===B[j]){ ops.push({t:'same', line:A[i]}); i++; j++; }
+    else if(dp[i+1][j] >= dp[i][j+1]){ ops.push({t:'del', line:A[i]}); i++; }
+    else { ops.push({t:'add', line:B[j]}); j++; }
+  }
+  while(i<n){ ops.push({t:'del', line:A[i]}); i++; }
+  while(j<m){ ops.push({t:'add', line:B[j]}); j++; }
+  return ops;
+}
+
+function runCompare(){
+  const a = document.getElementById('cmp-a').value;
+  const b = document.getElementById('cmp-b').value;
+  const out = document.getElementById('cmp-output');
+  const summary = document.getElementById('cmp-summary');
+  const ops = diffLines(a, b);
+  if(ops === null){
+    out.innerHTML = '<p class="hint" style="padding:12px;">Inputs are too large for an in-browser line diff (limit ~2000 lines each). Try comparing smaller excerpts.</p>';
+    summary.innerHTML = '';
+    return;
+  }
+  let added=0, removed=0, same=0;
+  out.innerHTML = '';
+  ops.forEach(op=>{
+    const row = document.createElement('div');
+    row.className = 'diff-line ' + (op.t==='add'?'add':op.t==='del'?'del':'');
+    const gutter = op.t==='add' ? '+' : op.t==='del' ? '−' : ' ';
+    row.innerHTML = '<span class="gutter">'+gutter+'</span><span>'+escapeHtml(op.line || ' ')+'</span>';
+    out.appendChild(row);
+    if(op.t==='add') added++; else if(op.t==='del') removed++; else same++;
+  });
+  summary.innerHTML =
+    '<span class="pill pill-ok">+'+added+' added</span>'+
+    '<span class="pill pill-restricted">−'+removed+' removed</span>'+
+    '<span class="pill">'+same+' unchanged</span>';
+}
+document.getElementById('cmp-run').addEventListener('click', runCompare);
+document.getElementById('cmp-a').value = '{\n  "user": "j.doe",\n  "role": "viewer",\n  "mfa_enabled": false,\n  "last_login": "2026-09-01T10:03:00Z"\n}';
+document.getElementById('cmp-b').value = '{\n  "user": "j.doe",\n  "role": "admin",\n  "mfa_enabled": false,\n  "last_login": "2026-09-16T08:47:00Z"\n}';
+runCompare();
+
+/* ------------------------------------------------------------------ *
+ * HISTORY
+ * ------------------------------------------------------------------ */
+
+function renderHistory(){
+  const list = loadHistory();
+  const el = document.getElementById('hist-list');
+  el.innerHTML = '';
+  if(list.length === 0){
+    el.innerHTML = '<div class="empty-state"><span class="glyph">◷</span><p>No requests sent yet. Anything you fire from Repeater or Intruder shows up here.</p></div>';
+    return;
+  }
+  list.forEach(entry=>{
+    const row = document.createElement('div');
+    row.className = 'history-row';
+    const date = new Date(entry.ts);
+    const statusHtml = entry.error
+      ? '<span class="status-pill status-err" style="padding:2px 8px;font-size:11px;">ERR</span>'
+      : '<span class="status-pill '+statusClass(entry.status)+'" style="padding:2px 8px;font-size:11px;">'+entry.status+'</span>';
+    row.innerHTML =
+      '<div class="history-main">'+statusHtml+
+      '<span class="history-method">'+entry.method+'</span>'+
+      '<span class="history-url">'+escapeHtml(entry.url)+'</span></div>'+
+      '<span class="history-time">'+date.toLocaleString()+'</span>';
+    row.addEventListener('click', ()=>{
+      document.getElementById('rep-method').value = entry.method;
+      document.getElementById('rep-url').value = entry.url;
+      document.getElementById('rep-body').value = entry.body || '';
+      repHeaders.setRows(entry.headers || []);
+      selectTool('repeater');
+    });
+    el.appendChild(row);
+  });
+}
+document.getElementById('hist-clear').addEventListener('click', ()=>{
+  clearHistory();
+  renderHistory();
+});
+
+})();
+</script>

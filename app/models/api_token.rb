@@ -78,9 +78,7 @@ class ApiToken < ApplicationRecord
     # update_columns deliberately skips validations/callbacks: this runs on
     # every authenticated request and must not re-validate the whole
     # record (e.g. expires_at_within_max_ttl) just to bump a usage marker.
-    # rubocop:disable Rails/SkipsModelValidations
-    update_columns(last_used_at: Time.current, last_used_ip: ip)
-    # rubocop:enable Rails/SkipsModelValidations
+    update_columns(last_used_at: Time.current, last_used_ip: ip) # rubocop:disable Rails/SkipsModelValidations
   end
 
   private

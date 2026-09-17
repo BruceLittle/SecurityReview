@@ -23,6 +23,10 @@
     --unknown-soft:#E7E9EC;
     --restricted:#A73B33;
     --restricted-soft:#F7DEDB;
+    --hawk-head:#D97C33;
+    --hawk-beak:#8A4A1E;
+    --hawk-eye:#1A1006;
+    --hawk-glint:#FFE8CF;
     --shadow: 0 1px 2px rgba(18,25,36,0.06), 0 8px 24px -12px rgba(18,25,36,0.18);
     --radius: 14px;
     color-scheme: light;
@@ -49,6 +53,10 @@
       --unknown-soft:#1E2530;
       --restricted:#E38078;
       --restricted-soft:#3A1917;
+      --hawk-head:#E8944D;
+      --hawk-beak:#C97A3E;
+      --hawk-eye:#120A04;
+      --hawk-glint:#FFF2E0;
       --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 12px 28px -14px rgba(0,0,0,0.6);
     }
   }
@@ -73,6 +81,10 @@
     --unknown-soft:#1E2530;
     --restricted:#E38078;
     --restricted-soft:#3A1917;
+    --hawk-head:#E8944D;
+    --hawk-beak:#C97A3E;
+    --hawk-eye:#120A04;
+    --hawk-glint:#FFF2E0;
     --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 12px 28px -14px rgba(0,0,0,0.6);
   }
 
@@ -95,6 +107,8 @@
   .app-header{display:flex;flex-direction:column;gap:6px;margin-bottom:24px;}
   .eyebrow{font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:0.14em;text-transform:uppercase;color:var(--accent);display:flex;align-items:center;gap:8px;}
   .eyebrow .dot{width:6px;height:6px;border-radius:50%;background:var(--accent);display:inline-block;}
+  .title-row{display:flex;align-items:center;gap:12px;}
+  .hawk-icon{height:clamp(34px,5.2vw,48px);width:auto;flex-shrink:0;filter:drop-shadow(0 2px 3px rgba(0,0,0,0.18));}
   h1.title{font-size:clamp(28px,4.5vw,40px);line-height:1.05;color:var(--ink);}
   .subtitle{color:var(--ink-soft);font-size:15px;max-width:74ch;line-height:1.5;margin-top:4px;}
 
@@ -269,7 +283,17 @@
 <div class="wrap">
   <header class="app-header">
     <span class="eyebrow"><span class="dot"></span>Zeitview · Security Tooling</span>
-    <h1 class="title">ZeitHawk</h1>
+    <div class="title-row">
+      <svg class="hawk-icon" viewBox="0 0 120 100" role="img" aria-label="ZeitHawk icon">
+        <ellipse cx="36" cy="46" rx="32" ry="30" fill="var(--hawk-head)"/>
+        <polygon points="52,16 120,36 54,60" fill="var(--hawk-head)"/>
+        <polygon points="106,28 120,36 96,54" fill="var(--hawk-beak)"/>
+        <polygon points="18,20 48,14 36,30" fill="var(--hawk-beak)"/>
+        <circle cx="34" cy="33" r="6" fill="var(--hawk-eye)"/>
+        <circle cx="32" cy="31" r="1.9" fill="var(--hawk-glint)"/>
+      </svg>
+      <h1 class="title">ZeitHawk</h1>
+    </div>
     <p class="subtitle">Craft, replay, and fuzz HTTP requests, then decode, hash, and diff what comes back — a lightweight, browser-only toolkit built in the spirit of Burp Suite's core tools: Repeater, Intruder, Decoder, and Comparer.</p>
     <div class="disclaimer">
       <span aria-hidden="true">⚠</span>

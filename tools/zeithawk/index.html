@@ -710,6 +710,20 @@ function setProxyBase(v){
 function viaProxy(url){
   return isProxyEnabled() ? (getProxyBase() + encodeURIComponent(url)) : url;
 }
+// Tries a direct fetch first and only falls back to the configured proxy
+// if that outright fails. Targets that already send their own permissive
+// CORS headers (dns.google, for one) keep working with no dependency on
+// a third party at all; targets that need the proxy still get it. This
+// also means a proxy outage/misbehavior never breaks something that
+// worked fine unproxied before the proxy toggle existed.
+async function fetchDirectOrProxied(url, opts){
+  if(!isProxyEnabled()) return fetch(url, opts);
+  try{
+    return await fetch(url, opts);
+  }catch(directErr){
+    return fetch(viaProxy(url), opts);
+  }
+}
 const proxyInput = document.getElementById('proxy-toggle-input');
 const proxyStatus = document.getElementById('proxy-toggle-status');
 const proxyBaseInput = document.getElementById('proxy-base-input');
@@ -739,7 +753,7 @@ async function fireRequest(method, url, headerRows, body){
   if(body && !['GET','HEAD'].includes(method)) opts.body = body;
   const t0 = performance.now();
   try{
-    const res = await fetch(viaProxy(url), opts);
+    const res = await fetchDirectOrProxied(url, opts);
     const text = await res.text();
     const ms = Math.round(performance.now() - t0);
     const outHeaders = [];
@@ -1245,7 +1259,7 @@ function detectTargetType(t){
 async function dohQuery(name, type){
   const url = 'https://dns.google/resolve?name=' + encodeURIComponent(name) + '&type=' + encodeURIComponent(type);
   try{
-    const res = await fetch(viaProxy(url), { signal: AbortSignal.timeout(6000) });
+    const res = await fetchDirectOrProxied(url, { signal: AbortSignal.timeout(6000) });
     if(!res.ok) return { ok:false, error: 'HTTP '+res.status };
     const data = await res.json();
     return { ok:true, data };
@@ -1257,7 +1271,7 @@ function reverseIpv4(ip){ return ip.split('.').reverse().join('.') + '.in-addr.a
 async function rdapLookup(target, isIp){
   const url = 'https://rdap.org/' + (isIp ? 'ip/' : 'domain/') + encodeURIComponent(target);
   try{
-    const res = await fetch(viaProxy(url), { headers:{accept:'application/rdap+json'}, signal: AbortSignal.timeout(8000) });
+    const res = await fetchDirectOrProxied(url, { headers:{accept:'application/rdap+json'}, signal: AbortSignal.timeout(8000) });
     if(!res.ok) return { ok:false, error:'HTTP '+res.status };
     const data = await res.json();
     return { ok:true, data };
@@ -1503,7 +1517,7 @@ async function runVulnScan(){
 
   let mainRes = null, mainErr = null, bodyText = '';
   try{
-    mainRes = await fetch(viaProxy(url), { mode:'cors', signal: AbortSignal.timeout(8000) });
+    mainRes = await fetchDirectOrProxied(url, { mode:'cors', signal: AbortSignal.timeout(8000) });
     bodyText = await mainRes.text();
   }catch(e){ mainErr = (e && e.message) || String(e); }
 
@@ -1555,7 +1569,7 @@ async function runVulnScan(){
 
   const pathResults = await Promise.all(PATH_CHECKS.map(async pc=>{
     try{
-      const res = await fetch(viaProxy(origin + pc.path), { mode:'cors', signal: AbortSignal.timeout(5000) });
+      const res = await fetchDirectOrProxied(origin + pc.path, { mode:'cors', signal: AbortSignal.timeout(5000) });
       return Object.assign({}, pc, { status: res.status });
     }catch(e){ return Object.assign({}, pc, { status: null }); }
   }));

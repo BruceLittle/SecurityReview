@@ -95,8 +95,6 @@
   .app-header{display:flex;flex-direction:column;gap:6px;margin-bottom:24px;}
   .eyebrow{font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:0.14em;text-transform:uppercase;color:var(--accent);display:flex;align-items:center;gap:8px;}
   .eyebrow .dot{width:6px;height:6px;border-radius:50%;background:var(--accent);display:inline-block;}
-  .title-row{display:flex;align-items:center;gap:12px;}
-  .hawk-icon{height:clamp(34px,5.2vw,48px);width:auto;flex-shrink:0;filter:drop-shadow(0 2px 3px rgba(0,0,0,0.18));}
   h1.title{font-size:clamp(28px,4.5vw,40px);line-height:1.05;color:var(--ink);}
   .subtitle{color:var(--ink-soft);font-size:15px;max-width:74ch;line-height:1.5;margin-top:4px;}
 
@@ -265,22 +263,28 @@
   .hint{font-size:12px;color:var(--ink-soft);line-height:1.5;margin:0;}
   [hidden]{display:none!important;}
 
+  .whois-row{display:flex;justify-content:space-between;gap:12px;padding:6px 0;border-bottom:1px solid var(--line-soft);font-family:'IBM Plex Mono',monospace;font-size:12.5px;}
+  .whois-row:last-child{border-bottom:none;}
+  .whois-label{color:var(--ink-soft);flex:0 0 auto;}
+  .whois-value{color:var(--ink);text-align:right;word-break:break-word;}
+
+  .cmd-row{display:flex;justify-content:space-between;align-items:center;gap:12px;background:var(--paper);border:1px solid var(--line-soft);border-radius:8px;padding:8px 12px;}
+  .cmd-row code{background:none;padding:0;font-size:12.5px;}
+
+  .sev-badge{font-family:'IBM Plex Mono',monospace;font-size:10.5px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:6px;border:1px solid transparent;text-transform:uppercase;white-space:nowrap;}
+  .sev-high{background:var(--restricted-soft);color:var(--restricted);border-color:var(--restricted);}
+  .sev-medium{background:var(--caution-soft);color:var(--caution);border-color:var(--caution);}
+  .sev-low{background:var(--slate-soft);color:var(--slate);border-color:var(--line);}
+  .sev-info{background:var(--unknown-soft);color:var(--unknown);border-color:var(--line);}
+  table.results td .hint{margin-top:3px;}
+
   .footer-note{margin-top:36px;padding-top:18px;border-top:1px solid var(--line);color:var(--unknown);font-size:12px;font-family:'IBM Plex Mono',monospace;text-align:center;line-height:1.6;}
 </style>
 
 <div class="wrap">
   <header class="app-header">
     <span class="eyebrow"><span class="dot"></span>Zeitview · Security Tooling</span>
-    <div class="title-row">
-      <svg class="hawk-icon" viewBox="0 0 120 100" role="img" aria-label="ZeitHawk icon">
-        <ellipse cx="34" cy="44" rx="30" ry="28" fill="var(--accent)"/>
-        <polygon points="54,18 118,38 56,58" fill="var(--accent)"/>
-        <polygon points="58,35 98,36.5 96,41 56,40" fill="var(--paper)"/>
-        <path d="M 26,16 Q 40,10 52,18" stroke="var(--paper)" stroke-width="4" fill="none" stroke-linecap="round"/>
-        <circle cx="42" cy="30" r="5.5" fill="var(--paper)"/>
-      </svg>
-      <h1 class="title">ZeitHawk</h1>
-    </div>
+    <h1 class="title">ZeitHawk</h1>
     <p class="subtitle">Craft, replay, and fuzz HTTP requests, then decode, hash, and diff what comes back — a lightweight, browser-only toolkit built in the spirit of Burp Suite's core tools: Repeater, Intruder, Decoder, and Comparer.</p>
     <div class="disclaimer">
       <span aria-hidden="true">⚠</span>
@@ -512,6 +516,105 @@
       <div id="hist-list"></div>
     </section>
 
+    <!-- ============ RECON ============ -->
+    <section id="tool-recon" class="tool-section panel" hidden>
+      <div class="tool-heading">
+        <h2>Recon</h2>
+        <p>DNS records, nameservers, and WHOIS/RDAP run live here via public lookup APIs. Real ping, traceroute, and a full port scan need raw sockets a browser will never expose — copy the equivalent commands below and run them in your own terminal, against targets you're authorized to test.</p>
+      </div>
+      <div class="row method-url-row" style="margin-bottom:16px;">
+        <input id="recon-target" type="text" placeholder="example.com or 93.184.216.34" />
+        <button type="button" class="btn btn-primary" id="recon-run">Run recon</button>
+      </div>
+
+      <div class="stack">
+        <div class="subpanel">
+          <span class="field-label">Resolved</span>
+          <div id="recon-resolved" class="hint">Enter a target and run recon.</div>
+        </div>
+
+        <div class="subpanel">
+          <span class="field-label">DNS records</span>
+          <div class="results-wrap">
+            <table class="results" id="recon-dns-table">
+              <thead><tr><th>Type</th><th>Value</th><th>TTL</th></tr></thead>
+              <tbody id="recon-dns-tbody"><tr><td colspan="3" class="hint">—</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="subpanel">
+          <span class="field-label">Nameservers</span>
+          <div id="recon-ns" class="row wrap"><span class="hint">—</span></div>
+        </div>
+
+        <div class="subpanel">
+          <span class="field-label">WHOIS / RDAP</span>
+          <div id="recon-whois"><span class="hint">—</span></div>
+        </div>
+
+        <div class="subpanel">
+          <span class="field-label">HTTP reachability (common web ports — not a full port scan)</span>
+          <div class="results-wrap">
+            <table class="results" id="recon-ports-table">
+              <thead><tr><th>Port</th><th>Scheme</th><th>Result</th><th>Time</th></tr></thead>
+              <tbody id="recon-ports-tbody"><tr><td colspan="4" class="hint">—</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="subpanel">
+          <span class="field-label">Run locally (ping, traceroute, full port scan)</span>
+          <p class="hint" style="margin-bottom:10px;">These need raw sockets no browser exposes. Only probe systems you own or are explicitly authorized to test.</p>
+          <div id="recon-commands" class="stack"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ VULN SCAN ============ -->
+    <section id="tool-scan" class="tool-section panel" hidden>
+      <div class="tool-heading">
+        <h2>Vuln Scan</h2>
+        <p>A lightweight header/config checker in the spirit of securityheaders.com or Mozilla Observatory — missing security headers, loose CORS, and commonly-exposed sensitive paths (<code>.env</code>, <code>.git/</code>, backup files). Not a signature-based scanner like Nessus/OpenVAS/Nikto, and needs the target to allow cross-origin reads (same CORS limits as Repeater) to see status codes.</p>
+      </div>
+      <div class="row method-url-row" style="margin-bottom:16px;">
+        <input id="scan-target" type="text" placeholder="https://example.com" />
+        <button type="button" class="btn btn-primary" id="scan-run">Run scan</button>
+      </div>
+
+      <div class="stack">
+        <div class="subpanel">
+          <span class="field-label">Findings</span>
+          <div id="scan-summary" class="row wrap"><span class="hint">Enter a target and run the scan.</span></div>
+        </div>
+
+        <div class="subpanel">
+          <span class="field-label">Security headers</span>
+          <div class="results-wrap">
+            <table class="results" id="scan-headers-table">
+              <thead><tr><th>Header</th><th>Status</th><th>Severity</th></tr></thead>
+              <tbody id="scan-headers-tbody"><tr><td colspan="3" class="hint">—</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="subpanel">
+          <span class="field-label">CORS policy</span>
+          <div id="scan-cors"><span class="hint">—</span></div>
+        </div>
+
+        <div class="subpanel">
+          <span class="field-label">Commonly-exposed paths</span>
+          <div class="results-wrap">
+            <table class="results" id="scan-paths-table">
+              <thead><tr><th>Path</th><th>What it is</th><th>Result</th><th>Severity</th></tr></thead>
+              <tbody id="scan-paths-tbody"><tr><td colspan="4" class="hint">—</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
   </main>
 
   <div class="footer-note">RUNS ENTIRELY CLIENT-SIDE · NOTHING IS SENT ANYWHERE EXCEPT REQUESTS YOU EXPLICITLY FIRE · v1.0</div>
@@ -606,6 +709,8 @@ const TOOLS = [
   { id:'decoder', glyph:'⌬', label:'Decoder' },
   { id:'comparer', glyph:'⇅', label:'Comparer' },
   { id:'history', glyph:'◷', label:'History' },
+  { id:'recon', glyph:'◎', label:'Recon' },
+  { id:'scan', glyph:'⛨', label:'Vuln Scan' },
 ];
 const tabbar = document.getElementById('tabbar');
 TOOLS.forEach(t=>{
@@ -1055,6 +1160,359 @@ document.getElementById('hist-clear').addEventListener('click', ()=>{
   clearHistory();
   renderHistory();
 });
+
+/* ------------------------------------------------------------------ *
+ * RECON
+ * ------------------------------------------------------------------ */
+
+function detectTargetType(t){
+  if(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.test(t)) return 'ipv4';
+  if(t.indexOf(':') !== -1 && /^[0-9a-fA-F:]+$/.test(t)) return 'ipv6';
+  return 'domain';
+}
+
+async function dohQuery(name, type){
+  const url = 'https://dns.google/resolve?name=' + encodeURIComponent(name) + '&type=' + encodeURIComponent(type);
+  try{
+    const res = await fetch(url, { signal: AbortSignal.timeout(6000) });
+    if(!res.ok) return { ok:false, error: 'HTTP '+res.status };
+    const data = await res.json();
+    return { ok:true, data };
+  }catch(e){ return { ok:false, error: (e && e.message) || String(e) }; }
+}
+
+function reverseIpv4(ip){ return ip.split('.').reverse().join('.') + '.in-addr.arpa'; }
+
+async function rdapLookup(target, isIp){
+  const url = 'https://rdap.org/' + (isIp ? 'ip/' : 'domain/') + encodeURIComponent(target);
+  try{
+    const res = await fetch(url, { headers:{accept:'application/rdap+json'}, signal: AbortSignal.timeout(8000) });
+    if(!res.ok) return { ok:false, error:'HTTP '+res.status };
+    const data = await res.json();
+    return { ok:true, data };
+  }catch(e){ return { ok:false, error: (e && e.message) || String(e) }; }
+}
+
+const RECON_PORTS = [
+  {port:80, scheme:'http'}, {port:443, scheme:'https'},
+  {port:8080, scheme:'http'}, {port:8443, scheme:'https'},
+  {port:8000, scheme:'http'}, {port:3000, scheme:'http'},
+];
+
+async function checkPort(host, port, scheme){
+  const url = scheme+'://'+host+':'+port+'/';
+  const t0 = performance.now();
+  try{
+    await fetch(url, { mode:'no-cors', cache:'no-store', signal: AbortSignal.timeout(4000) });
+    return { port, scheme, status:'reachable', ms: Math.round(performance.now()-t0) };
+  }catch(e){
+    const ms = Math.round(performance.now()-t0);
+    const msg = String((e && e.message) || e);
+    if(e && e.name === 'TimeoutError') return { port, scheme, status:'timeout', ms };
+    if(msg.indexOf('UNSAFE_PORT') !== -1) return { port, scheme, status:'blocked by browser', ms };
+    return { port, scheme, status:'closed / unreachable', ms };
+  }
+}
+
+function buildLocalCommands(target){
+  return [
+    { label:'DNS — all records', cmd:'dig '+target+' ANY' },
+    { label:'Nameservers', cmd:'dig '+target+' NS +short' },
+    { label:'Reverse DNS', cmd:'nslookup '+target },
+    { label:'WHOIS', cmd:'whois '+target },
+    { label:'Ping', cmd:'ping -c 4 '+target },
+    { label:'Traceroute', cmd:'traceroute '+target },
+    { label:'Full port scan (authorized targets only)', cmd:'nmap -sV -p- '+target },
+  ];
+}
+
+function renderReconCommands(target){
+  const wrap = document.getElementById('recon-commands');
+  wrap.innerHTML = '';
+  buildLocalCommands(target).forEach(c=>{
+    const row = document.createElement('div');
+    row.className = 'cmd-row';
+    row.innerHTML = '<div><div class="hint" style="margin-bottom:2px;">'+escapeHtml(c.label)+'</div><code>'+escapeHtml(c.cmd)+'</code></div>';
+    const btn = document.createElement('button');
+    btn.type = 'button'; btn.className = 'btn btn-ghost btn-sm'; btn.textContent = 'Copy';
+    btn.addEventListener('click', async ()=>{
+      try{
+        await navigator.clipboard.writeText(c.cmd);
+        btn.textContent = 'Copied';
+        setTimeout(()=>{ btn.textContent = 'Copy'; }, 1200);
+      }catch(e){ btn.textContent = 'Select & copy manually'; }
+    });
+    row.appendChild(btn);
+    wrap.appendChild(row);
+  });
+}
+
+function whoisRow(label, value){
+  return '<div class="whois-row"><span class="whois-label">'+escapeHtml(label)+'</span><span class="whois-value">'+escapeHtml(value)+'</span></div>';
+}
+
+function extractRdapSummary(data){
+  const rows = [];
+  if(data.ldhName) rows.push(['Name', data.ldhName]);
+  if(data.handle) rows.push(['Handle', data.handle]);
+  if(data.name) rows.push(['Network name', data.name]);
+  if(data.startAddress) rows.push(['Range start', data.startAddress]);
+  if(data.endAddress) rows.push(['Range end', data.endAddress]);
+  if(data.country) rows.push(['Country', data.country]);
+  if(Array.isArray(data.status) && data.status.length) rows.push(['Status', data.status.join(', ')]);
+  if(Array.isArray(data.events)){
+    data.events.forEach(ev=>{
+      if(ev.eventAction && ev.eventDate) rows.push([ev.eventAction, ev.eventDate.slice(0,10)]);
+    });
+  }
+  if(Array.isArray(data.nameservers) && data.nameservers.length){
+    rows.push(['Name servers', data.nameservers.map(ns=>ns.ldhName).filter(Boolean).join(', ')]);
+  }
+  if(Array.isArray(data.entities)){
+    const registrar = data.entities.find(e=>Array.isArray(e.roles) && e.roles.indexOf('registrar') !== -1);
+    if(registrar){
+      let fn = null;
+      if(Array.isArray(registrar.vcardArray) && Array.isArray(registrar.vcardArray[1])){
+        const fnEntry = registrar.vcardArray[1].find(v=>v[0]==='fn');
+        if(fnEntry) fn = fnEntry[3];
+      }
+      rows.push(['Registrar', fn || registrar.handle || '(unnamed)']);
+    }
+  }
+  return rows;
+}
+
+async function runRecon(){
+  const target = document.getElementById('recon-target').value.trim();
+  if(!target) return;
+  const type = detectTargetType(target);
+  const isIp = type !== 'domain';
+
+  document.getElementById('recon-resolved').innerHTML = '<span class="hint">Looking up…</span>';
+  document.getElementById('recon-dns-tbody').innerHTML = '<tr><td colspan="3" class="hint">Loading…</td></tr>';
+  document.getElementById('recon-ns').innerHTML = '<span class="hint">Loading…</span>';
+  document.getElementById('recon-whois').innerHTML = '<span class="hint">Loading…</span>';
+  document.getElementById('recon-ports-tbody').innerHTML = '<tr><td colspan="4" class="hint">Checking…</td></tr>';
+  renderReconCommands(target);
+
+  (async ()=>{
+    if(!isIp){
+      const types = ['A','AAAA','MX','TXT','NS','CNAME','SOA'];
+      const results = await Promise.all(types.map(t=>dohQuery(target, t)));
+      const rows = [];
+      const resolvedIps = [];
+      results.forEach((r, i)=>{
+        const t = types[i];
+        if(!r.ok || !r.data.Answer) return;
+        r.data.Answer.forEach(ans=>{
+          rows.push([t, ans.data, ans.TTL]);
+          if(t === 'A' || t === 'AAAA') resolvedIps.push(ans.data);
+        });
+      });
+      document.getElementById('recon-dns-tbody').innerHTML = rows.length
+        ? rows.map(r=>'<tr><td class="mono">'+escapeHtml(r[0])+'</td><td class="mono">'+escapeHtml(r[1])+'</td><td class="mono">'+escapeHtml(r[2])+'</td></tr>').join('')
+        : '<tr><td colspan="3" class="hint">No records found (or the lookup failed).</td></tr>';
+      document.getElementById('recon-resolved').innerHTML = resolvedIps.length
+        ? resolvedIps.map(ip=>'<span class="pill mono">'+escapeHtml(ip)+'</span>').join(' ')
+        : '<span class="hint">No A/AAAA records found.</span>';
+      const nsRows = rows.filter(r=>r[0]==='NS');
+      document.getElementById('recon-ns').innerHTML = nsRows.length
+        ? nsRows.map(r=>'<span class="pill mono">'+escapeHtml(r[1])+'</span>').join(' ')
+        : '<span class="hint">No NS records found.</span>';
+    } else {
+      document.getElementById('recon-resolved').innerHTML = '<span class="pill mono">'+escapeHtml(target)+'</span>';
+      if(type === 'ipv4'){
+        const ptr = await dohQuery(reverseIpv4(target), 'PTR');
+        document.getElementById('recon-dns-tbody').innerHTML = (ptr.ok && ptr.data.Answer && ptr.data.Answer.length)
+          ? ptr.data.Answer.map(a=>'<tr><td class="mono">PTR</td><td class="mono">'+escapeHtml(a.data)+'</td><td class="mono">'+escapeHtml(a.TTL)+'</td></tr>').join('')
+          : '<tr><td colspan="3" class="hint">No reverse DNS (PTR) record found.</td></tr>';
+      } else {
+        document.getElementById('recon-dns-tbody').innerHTML = '<tr><td colspan="3" class="hint">Reverse DNS lookup for IPv6 isn\'t implemented here.</td></tr>';
+      }
+      document.getElementById('recon-ns').innerHTML = '<span class="hint">Not applicable for an IP target.</span>';
+    }
+  })();
+
+  (async ()=>{
+    const r = await rdapLookup(target, isIp);
+    const el = document.getElementById('recon-whois');
+    if(!r.ok){
+      el.innerHTML = '<span class="hint">Couldn\'t load RDAP/WHOIS data ('+escapeHtml(r.error)+') — the registry may not allow browser access. Try the <code>whois</code> command below instead.</span>';
+      return;
+    }
+    const rows = extractRdapSummary(r.data);
+    const summary = rows.length ? rows.map(([k,v])=>whoisRow(k,v)).join('') : '<span class="hint">No summary fields found — see raw response below.</span>';
+    const raw = '<details class="more" style="margin-top:10px;"><summary>Raw RDAP response</summary><pre class="readout" style="margin-top:10px;">'+escapeHtml(JSON.stringify(r.data, null, 2))+'</pre></details>';
+    el.innerHTML = summary + raw;
+  })();
+
+  (async ()=>{
+    const results = await Promise.all(RECON_PORTS.map(p=>checkPort(target, p.port, p.scheme)));
+    document.getElementById('recon-ports-tbody').innerHTML = results.map(r=>{
+      const dot = r.status==='reachable' ? 'dot-ok' : (r.status==='timeout' ? 'dot-caution' : 'dot-restricted');
+      return '<tr><td class="mono">'+r.port+'</td><td class="mono">'+r.scheme+'</td><td><span class="status-dot '+dot+'"></span>'+escapeHtml(r.status)+'</td><td class="mono">'+r.ms+' ms</td></tr>';
+    }).join('');
+  })();
+}
+
+document.getElementById('recon-run').addEventListener('click', runRecon);
+document.getElementById('recon-target').addEventListener('keydown', (e)=>{ if(e.key==='Enter') runRecon(); });
+document.getElementById('recon-target').value = 'example.com';
+
+/* ------------------------------------------------------------------ *
+ * VULN SCAN
+ * ------------------------------------------------------------------ */
+
+// Browsers only expose a small safelisted set of response headers to
+// cross-origin JS (Cache-Control, Content-Type, etc.) — none of the
+// security headers below are in it. A fetch can only ever PROVE a header
+// is present (if the target opted in via Access-Control-Expose-Headers,
+// or happens to be same-origin); it can never prove one is absent, so
+// these checks report "present" or "unknown", never a false "missing".
+const SECURITY_HEADER_CHECKS = [
+  { header:'strict-transport-security', label:'Strict-Transport-Security (HSTS)',
+    note:'If actually missing: a plain-HTTP link or a user\'s first visit can be intercepted before the redirect to HTTPS ever happens.' },
+  { header:'content-security-policy', label:'Content-Security-Policy', altCsp:'frame-ancestors',
+    note:'If actually missing: one missed output-encoding bug becomes a full XSS with no second line of defense.' },
+  { header:'x-frame-options', label:'X-Frame-Options / frame-ancestors',
+    note:'If actually missing from both: the page can be framed by another site for clickjacking.' },
+  { header:'x-content-type-options', label:'X-Content-Type-Options',
+    note:'If actually missing: some browsers may MIME-sniff a response into a more dangerous content type.' },
+  { header:'referrer-policy', label:'Referrer-Policy',
+    note:'If actually missing: full URLs (including sensitive query params) may leak to third parties via Referer.' },
+  { header:'permissions-policy', label:'Permissions-Policy',
+    note:'If actually missing: no explicit restriction on powerful browser features (camera, geolocation, etc.).' },
+];
+
+const INFO_HEADER_CHECKS = [
+  { header:'server', label:'Server' },
+  { header:'x-powered-by', label:'X-Powered-By' },
+];
+
+function findMetaCsp(html){
+  const m = /<meta\s+[^>]*http-equiv=["']content-security-policy["'][^>]*content=["']([^"']+)["']/i.exec(html || '');
+  return m ? m[1] : null;
+}
+
+const PATH_CHECKS = [
+  { path:'/.env', label:'Environment file', severity:'high' },
+  { path:'/.git/HEAD', label:'Git repository exposed', severity:'high' },
+  { path:'/.git/config', label:'Git repository exposed', severity:'high' },
+  { path:'/wp-config.php.bak', label:'WordPress config backup', severity:'high' },
+  { path:'/id_rsa', label:'Private SSH key', severity:'high' },
+  { path:'/backup.zip', label:'Backup archive', severity:'medium' },
+  { path:'/config.php.bak', label:'Config backup file', severity:'medium' },
+  { path:'/phpinfo.php', label:'phpinfo() disclosure', severity:'medium' },
+  { path:'/server-status', label:'Apache server-status', severity:'medium' },
+  { path:'/.htaccess', label:'.htaccess exposed', severity:'medium' },
+  { path:'/.DS_Store', label:'.DS_Store exposed', severity:'low' },
+  { path:'/.well-known/security.txt', label:'security.txt (good practice)', severity:'info' },
+];
+
+async function runVulnScan(){
+  const raw = document.getElementById('scan-target').value.trim();
+  if(!raw) return;
+  const url = /^https?:\/\//i.test(raw) ? raw : 'https://' + raw;
+  let origin;
+  try{ origin = new URL(url).origin; }
+  catch(e){
+    document.getElementById('scan-summary').innerHTML = '<span class="hint">That doesn\'t look like a valid URL.</span>';
+    return;
+  }
+
+  document.getElementById('scan-summary').innerHTML = '<span class="hint">Scanning…</span>';
+  document.getElementById('scan-headers-tbody').innerHTML = '<tr><td colspan="3" class="hint">Loading…</td></tr>';
+  document.getElementById('scan-cors').innerHTML = '<span class="hint">Loading…</span>';
+  document.getElementById('scan-paths-tbody').innerHTML = '<tr><td colspan="4" class="hint">Checking…</td></tr>';
+
+  const findings = [];
+
+  let mainRes = null, mainErr = null, bodyText = '';
+  try{
+    mainRes = await fetch(url, { mode:'cors', signal: AbortSignal.timeout(8000) });
+    bodyText = await mainRes.text();
+  }catch(e){ mainErr = (e && e.message) || String(e); }
+
+  if(!mainRes){
+    document.getElementById('scan-headers-tbody').innerHTML = '<tr><td colspan="3" class="hint">Couldn\'t reach the target: '+escapeHtml(mainErr||'unknown error')+' — likely CORS or a network/DNS error.</td></tr>';
+    document.getElementById('scan-cors').innerHTML = '<span class="hint">No response to inspect.</span>';
+  } else {
+    const h = mainRes.headers;
+    const metaCsp = findMetaCsp(bodyText);
+    const rows = SECURITY_HEADER_CHECKS.map(chk=>{
+      const raw = h.get(chk.header);
+      const present = !!raw || (chk.header==='content-security-policy' && !!metaCsp)
+        || (chk.altCsp && !!h.get('content-security-policy') && h.get('content-security-policy').indexOf(chk.altCsp)!==-1);
+      return { label: chk.label, present, note: chk.note, value: raw || (chk.header==='content-security-policy' ? metaCsp : null) };
+    });
+    document.getElementById('scan-headers-tbody').innerHTML = rows.map(r=>{
+      const dot = r.present ? 'dot-ok' : 'dot-caution';
+      const sevCell = r.present ? '<span class="sev-badge sev-info">VERIFIED</span>' : '<span class="sev-badge sev-info">UNKNOWN</span>';
+      const status = r.present ? 'Present' : 'Not readable cross-origin';
+      return '<tr><td>'+escapeHtml(r.label)+'<div class="hint">'+escapeHtml(r.note)+'</div></td>'+
+        '<td><span class="status-dot '+dot+'"></span>'+status+'</td>'+
+        '<td>'+sevCell+'</td></tr>';
+    }).join('');
+    document.getElementById('scan-headers-tbody').innerHTML +=
+      '<tr><td colspan="3" class="hint">Browsers only expose a small safelist of response headers to cross-origin JS — "Not readable cross-origin" means unproven either way, not confirmed missing. For ground truth: <code>curl -sD - -o /dev/null '+escapeHtml(url)+'</code></td></tr>';
+
+    const banners = INFO_HEADER_CHECKS.map(c=>{ const v = h.get(c.header); return v ? (c.label+': '+v) : null; }).filter(Boolean);
+    if(banners.length){
+      document.getElementById('scan-headers-tbody').innerHTML += '<tr><td colspan="3" class="hint">'+escapeHtml(banners.join(' · '))+' — banner headers disclose software/version info, worth trimming.</td></tr>';
+    }
+
+    const acao = h.get('access-control-allow-origin');
+    const acac = h.get('access-control-allow-credentials');
+    if(!acao){
+      document.getElementById('scan-cors').innerHTML = '<span class="hint">Access-Control-Allow-Origin isn\'t readable cross-origin either (same restriction as above) — check with <code>curl -sD - -o /dev/null '+escapeHtml(url)+'</code>.</span>';
+    } else if(acao === '*'){
+      document.getElementById('scan-cors').innerHTML =
+        '<div class="whois-row"><span class="whois-label">Access-Control-Allow-Origin</span><span class="whois-value mono">*</span></div>'+
+        '<p class="hint" style="margin-top:6px;">Open to any origin — fine for a public, unauthenticated API; worth a second look if this endpoint ever returns anything sensitive.</p>';
+    } else {
+      const flagged = acac === 'true';
+      document.getElementById('scan-cors').innerHTML =
+        '<div class="whois-row"><span class="whois-label">Access-Control-Allow-Origin</span><span class="whois-value mono">'+escapeHtml(acao)+'</span></div>'+
+        '<div class="whois-row"><span class="whois-label">Access-Control-Allow-Credentials</span><span class="whois-value mono">'+escapeHtml(acac||'(not set)')+'</span></div>'+
+        (flagged ? '<p class="hint" style="margin-top:6px;color:var(--restricted);">Reflects a specific origin <strong>and</strong> allows credentials — if it reflects any Origin unconditionally (test by re-requesting from a different origin), that lets any site read authenticated responses cross-origin.</p>' : '');
+      if(flagged) findings.push({ severity:'high', label:'CORS reflects an origin with credentials allowed' });
+    }
+  }
+
+  const pathResults = await Promise.all(PATH_CHECKS.map(async pc=>{
+    try{
+      const res = await fetch(origin + pc.path, { mode:'cors', signal: AbortSignal.timeout(5000) });
+      return Object.assign({}, pc, { status: res.status });
+    }catch(e){ return Object.assign({}, pc, { status: null }); }
+  }));
+  const checkedCount = pathResults.filter(r=>r.status !== null).length;
+  const flaggedPaths = pathResults.filter(r=>r.status === 200 || r.status === 401 || r.status === 403);
+  if(checkedCount === 0){
+    document.getElementById('scan-paths-tbody').innerHTML = '<tr><td colspan="4" class="hint">All path checks were blocked (CORS or network) — this check needs the target to allow cross-origin reads, same as Repeater.</td></tr>';
+  } else if(flaggedPaths.length === 0){
+    document.getElementById('scan-paths-tbody').innerHTML = '<tr><td colspan="4" class="hint">None of the checked paths responded with 200/401/403.</td></tr>';
+  } else {
+    document.getElementById('scan-paths-tbody').innerHTML = flaggedPaths.map(r=>{
+      const isOpen = r.status === 200;
+      const sev = isOpen ? r.severity : 'info';
+      if(isOpen && r.severity !== 'info') findings.push({ severity:r.severity, label:r.label+' exposed at '+r.path });
+      const resultText = isOpen ? ('Present (HTTP '+r.status+')') : ('Exists, access restricted (HTTP '+r.status+')');
+      return '<tr><td class="mono">'+escapeHtml(r.path)+'</td><td>'+escapeHtml(r.label)+'</td><td>'+escapeHtml(resultText)+'</td><td><span class="sev-badge sev-'+sev+'">'+sev.toUpperCase()+'</span></td></tr>';
+    }).join('');
+  }
+
+  const counts = { high:0, medium:0, low:0 };
+  findings.forEach(f=>{ if(counts[f.severity] !== undefined) counts[f.severity]++; });
+  document.getElementById('scan-summary').innerHTML =
+    '<span class="sev-badge sev-high">'+counts.high+' high</span>'+
+    '<span class="sev-badge sev-medium">'+counts.medium+' medium</span>'+
+    '<span class="sev-badge sev-low">'+counts.low+' low</span>'+
+    (findings.length===0 ? '<span class="hint">No findings from the checks above.</span>' : '');
+}
+
+document.getElementById('scan-run').addEventListener('click', runVulnScan);
+document.getElementById('scan-target').addEventListener('keydown', (e)=>{ if(e.key==='Enter') runVulnScan(); });
+document.getElementById('scan-target').value = 'https://example.com';
 
 })();
 </script>

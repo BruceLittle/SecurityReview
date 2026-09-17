@@ -264,6 +264,14 @@
   [hidden]{display:none!important;}
 
   .footer-note{margin-top:36px;padding-top:18px;border-top:1px solid var(--line);color:var(--unknown);font-size:12px;font-family:'IBM Plex Mono',monospace;text-align:center;line-height:1.6;}
+
+  .auth-link{
+    font-family:'IBM Plex Mono',monospace;font-size:12.5px;font-weight:600;color:var(--restricted);
+    background:none;border:none;padding:0;text-decoration:none;border-bottom:1px solid var(--restricted);
+    padding-bottom:1px;cursor:pointer;
+  }
+  .auth-link:hover{color:var(--accent);border-color:var(--accent);}
+  .disclaimer .auth-row{display:block;margin-top:8px;}
 </style>
 
 <div class="wrap">
@@ -273,7 +281,10 @@
     <p class="subtitle">Craft, replay, and fuzz HTTP requests, then decode, hash, and diff what comes back — a lightweight, browser-only toolkit built in the spirit of Burp Suite's core tools: Repeater, Intruder, Decoder, and Comparer.</p>
     <div class="disclaimer">
       <span aria-hidden="true">⚠</span>
-      <span><strong>Authorized testing only</strong> — only point this at systems you own or are explicitly authorized to test. Every request runs from your browser, so it's bound by the same CORS rules as any web page: the target must allow cross-origin access for you to see its status, headers, or body here, and browsers never let a page override <code>Host</code>, <code>Cookie</code>, <code>Origin</code>, or a handful of other headers. Nothing you enter leaves your browser except the requests you explicitly send.</span>
+      <span>
+        <strong>Authorized testing only</strong> — only point this at systems you own or are explicitly authorized to test. Every request runs from your browser, so it's bound by the same CORS rules as any web page: the target must allow cross-origin access for you to see its status, headers, or body here, and browsers never let a page override <code>Host</code>, <code>Cookie</code>, <code>Origin</code>, or a handful of other headers. Nothing you enter leaves your browser except the requests you explicitly send.
+        <span class="auth-row">Don't have written sign-off for the target in Repeater yet? <button type="button" class="auth-link" id="request-auth-btn">Request Security authorization →</button></span>
+      </span>
     </div>
   </header>
 
@@ -524,6 +535,26 @@ function isForbiddenHeader(name){
 }
 
 function escapeHtml(str){ const d=document.createElement('div'); d.textContent = String(str); return d.innerHTML; }
+
+// Zeitview policy: same escalation path as the AI Tool Finder — point this at your
+// real Security intake (an email alias, or swap buildAuthorizationRequestHref()
+// below for a link to a ticket queue) before relying on it.
+// TODO(Bruce): confirm this is the right alias for testing-authorization requests.
+const SECURITY_APPROVAL_EMAIL = 'security@zeitview.com';
+function buildAuthorizationRequestHref(){
+  const target = (document.getElementById('rep-url').value || '').trim() || '(not specified)';
+  const subject = 'Security testing authorization request: ZeitHawk';
+  const bodyLines = [
+    `Target: ${target}`,
+    'Tool: ZeitHawk (Repeater / Intruder)',
+    '',
+    'Requesting written sign-off to run manual HTTP testing against the target above before proceeding.',
+  ];
+  return `mailto:${SECURITY_APPROVAL_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(bodyLines.join('\n'))}`;
+}
+document.getElementById('request-auth-btn').addEventListener('click', ()=>{
+  window.location.href = buildAuthorizationRequestHref();
+});
 
 function statusClass(status){
   if(status == null) return 'status-err';

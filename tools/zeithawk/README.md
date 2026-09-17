@@ -41,4 +41,8 @@ raw socket control, use a real intercepting proxy (Burp Suite, OWASP ZAP,
 mitmproxy).
 
 **Authorized testing only.** Only point this at systems you own or have
-explicit permission to test.
+explicit permission to test. If you don't have written sign-off for a
+target yet, the "Request Security authorization" link in the banner opens
+a prefilled email to Security (same escalation pattern as the AI Tool
+Finder artifact) — update `SECURITY_APPROVAL_EMAIL` in `index.html` if
+that alias ever changes.

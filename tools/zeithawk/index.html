@@ -264,24 +264,6 @@
   [hidden]{display:none!important;}
 
   .footer-note{margin-top:36px;padding-top:18px;border-top:1px solid var(--line);color:var(--unknown);font-size:12px;font-family:'IBM Plex Mono',monospace;text-align:center;line-height:1.6;}
-
-  .auth-link{
-    font-family:'IBM Plex Mono',monospace;font-size:12.5px;font-weight:600;color:var(--restricted);
-    background:none;border:none;padding:0;text-decoration:none;border-bottom:1px solid var(--restricted);
-    padding-bottom:1px;cursor:pointer;
-  }
-  .auth-link:hover{color:var(--accent);border-color:var(--accent);}
-  .disclaimer .auth-row{display:block;margin-top:8px;}
-
-  .backend-log{margin-top:10px;}
-  .backend-log summary{cursor:pointer;font-size:12.5px;color:var(--ink-soft);list-style:none;display:flex;align-items:center;gap:6px;}
-  .backend-log summary::-webkit-details-marker{display:none;}
-  .backend-log summary::before{content:"▸";font-size:10px;transition:transform .15s ease;}
-  .backend-log[open] summary::before{transform:rotate(90deg);}
-  .backend-log-body{margin-top:8px;display:flex;flex-direction:column;gap:6px;}
-  .backend-log-row{display:flex;justify-content:space-between;gap:10px;font-family:'IBM Plex Mono',monospace;font-size:11.5px;border:1px solid var(--line-soft);border-radius:8px;padding:6px 10px;background:var(--paper-raised);}
-  .backend-log-row .blr-target{color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-  .backend-log-row .blr-time{color:var(--ink-soft);flex:0 0 auto;}
 </style>
 
 <div class="wrap">
@@ -293,12 +275,7 @@
       <span aria-hidden="true">⚠</span>
       <span>
         <strong>Authorized testing only</strong> — only point this at systems you own or are explicitly authorized to test. Every request runs from your browser, so it's bound by the same CORS rules as any web page: the target must allow cross-origin access for you to see its status, headers, or body here, and browsers never let a page override <code>Host</code>, <code>Cookie</code>, <code>Origin</code>, or a handful of other headers. Nothing you enter leaves your browser except the requests you explicitly send.
-        <span class="auth-row">Don't have written sign-off for the target in Repeater yet? <button type="button" class="auth-link" id="request-auth-btn">Request Security authorization →</button></span>
       </span>
-      <details class="backend-log" id="backend-log">
-        <summary>View recent authorization requests (logged via Apps Script + Firestore)</summary>
-        <div class="backend-log-body" id="backend-log-body"><span class="hint">Not loaded yet.</span></div>
-      </details>
     </div>
   </header>
 
@@ -549,83 +526,6 @@ function isForbiddenHeader(name){
 }
 
 function escapeHtml(str){ const d=document.createElement('div'); d.textContent = String(str); return d.innerHTML; }
-
-// Zeitview policy: same escalation path as the AI Tool Finder — point this at your
-// real Security intake (an email alias, or swap buildAuthorizationRequestHref()
-// below for a link to a ticket queue) before relying on it.
-// TODO(Bruce): confirm this is the right alias for testing-authorization requests.
-const SECURITY_APPROVAL_EMAIL = 'security@zeitview.com';
-function buildAuthorizationRequestHref(target){
-  const subject = 'Security testing authorization request: ZeitHawk';
-  const bodyLines = [
-    `Target: ${target}`,
-    'Tool: ZeitHawk (Repeater / Intruder)',
-    '',
-    'Requesting written sign-off to run manual HTTP testing against the target above before proceeding.',
-  ];
-  return `mailto:${SECURITY_APPROVAL_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(bodyLines.join('\n'))}`;
-}
-
-// Durable log of the same requests, alongside the mailto above — see
-// tools/apps-script-backend/README.md for what this is and how to deploy it.
-// TODO(Bruce): paste the Apps Script web app URL here after deploying it.
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby099Y0rn2JjP4F6WoQEZu7UqnhPDLgWqmw_kBb9EBNSpS646-_6DASF-S66VDa5-3A/exec';
-function backendConfigured(){ return APPS_SCRIPT_URL.indexOf('REPLACE_WITH_') !== 0; }
-
-function logToBackend(collection, fields){
-  if(!backendConfigured()) return;
-  try{
-    fetch(APPS_SCRIPT_URL, {
-      method: 'POST',
-      mode: 'no-cors', // fire-and-forget — Apps Script responses aren't CORS-readable anyway
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // keeps this a CORS-simple request (no preflight)
-      body: JSON.stringify(Object.assign({ collection }, fields)),
-    }).catch(()=>{});
-  }catch(e){ /* backend logging is best-effort only */ }
-}
-
-function fetchRecentFromBackend(collection, limit, cb){
-  if(!backendConfigured()){ cb({ ok:false, error:'not configured' }); return; }
-  const cbName = 'zh_cb_' + Math.random().toString(36).slice(2);
-  const script = document.createElement('script');
-  window[cbName] = function(result){
-    cb(result);
-    delete window[cbName];
-    script.remove();
-  };
-  script.src = APPS_SCRIPT_URL + '?collection=' + encodeURIComponent(collection) + '&limit=' + limit + '&callback=' + cbName;
-  script.onerror = ()=>{ cb({ ok:false, error:'network error' }); delete window[cbName]; script.remove(); };
-  document.body.appendChild(script);
-}
-
-document.getElementById('request-auth-btn').addEventListener('click', ()=>{
-  const target = (document.getElementById('rep-url').value || '').trim() || '(not specified)';
-  logToBackend('security_authorization_requests', { tool:'ZeitHawk', target, requester:'', note:'' });
-  window.location.href = buildAuthorizationRequestHref(target);
-});
-
-let backendLogLoaded = false;
-document.getElementById('backend-log').addEventListener('toggle', function(){
-  if(!this.open || backendLogLoaded) return;
-  backendLogLoaded = true;
-  const body = document.getElementById('backend-log-body');
-  if(!backendConfigured()){
-    body.innerHTML = '<span class="hint">Not configured yet — see tools/apps-script-backend/README.md to deploy the backend and set APPS_SCRIPT_URL.</span>';
-    return;
-  }
-  body.innerHTML = '<span class="hint">Loading…</span>';
-  fetchRecentFromBackend('security_authorization_requests', 10, (result)=>{
-    if(!result.ok){ body.innerHTML = '<span class="hint">Couldn\'t load requests: '+escapeHtml(result.error||'unknown error')+'</span>'; return; }
-    if(!result.items || !result.items.length){ body.innerHTML = '<span class="hint">No requests logged yet.</span>'; return; }
-    body.innerHTML = '';
-    result.items.forEach(item=>{
-      const row = document.createElement('div');
-      row.className = 'backend-log-row';
-      row.innerHTML = '<span class="blr-target" title="'+escapeHtml(item.target||'')+'">'+escapeHtml(item.target||'(no target)')+'</span><span class="blr-time">'+escapeHtml(item.createdAt||'')+'</span>';
-      body.appendChild(row);
-    });
-  });
-});
 
 function statusClass(status){
   if(status == null) return 'status-err';

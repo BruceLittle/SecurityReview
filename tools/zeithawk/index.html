@@ -271,6 +271,13 @@
   .cmd-row{display:flex;justify-content:space-between;align-items:center;gap:12px;background:var(--paper);border:1px solid var(--line-soft);border-radius:8px;padding:8px 12px;}
   .cmd-row code{background:none;padding:0;font-size:12.5px;}
 
+  .sev-badge{font-family:'IBM Plex Mono',monospace;font-size:10.5px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:6px;border:1px solid transparent;text-transform:uppercase;white-space:nowrap;}
+  .sev-high{background:var(--restricted-soft);color:var(--restricted);border-color:var(--restricted);}
+  .sev-medium{background:var(--caution-soft);color:var(--caution);border-color:var(--caution);}
+  .sev-low{background:var(--slate-soft);color:var(--slate);border-color:var(--line);}
+  .sev-info{background:var(--unknown-soft);color:var(--unknown);border-color:var(--line);}
+  table.results td .hint{margin-top:3px;}
+
   .footer-note{margin-top:36px;padding-top:18px;border-top:1px solid var(--line);color:var(--unknown);font-size:12px;font-family:'IBM Plex Mono',monospace;text-align:center;line-height:1.6;}
 </style>
 
@@ -564,6 +571,50 @@
       </div>
     </section>
 
+    <!-- ============ VULN SCAN ============ -->
+    <section id="tool-scan" class="tool-section panel" hidden>
+      <div class="tool-heading">
+        <h2>Vuln Scan</h2>
+        <p>A lightweight header/config checker in the spirit of securityheaders.com or Mozilla Observatory — missing security headers, loose CORS, and commonly-exposed sensitive paths (<code>.env</code>, <code>.git/</code>, backup files). Not a signature-based scanner like Nessus/OpenVAS/Nikto, and needs the target to allow cross-origin reads (same CORS limits as Repeater) to see status codes.</p>
+      </div>
+      <div class="row method-url-row" style="margin-bottom:16px;">
+        <input id="scan-target" type="text" placeholder="https://example.com" />
+        <button type="button" class="btn btn-primary" id="scan-run">Run scan</button>
+      </div>
+
+      <div class="stack">
+        <div class="subpanel">
+          <span class="field-label">Findings</span>
+          <div id="scan-summary" class="row wrap"><span class="hint">Enter a target and run the scan.</span></div>
+        </div>
+
+        <div class="subpanel">
+          <span class="field-label">Security headers</span>
+          <div class="results-wrap">
+            <table class="results" id="scan-headers-table">
+              <thead><tr><th>Header</th><th>Status</th><th>Severity</th></tr></thead>
+              <tbody id="scan-headers-tbody"><tr><td colspan="3" class="hint">—</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="subpanel">
+          <span class="field-label">CORS policy</span>
+          <div id="scan-cors"><span class="hint">—</span></div>
+        </div>
+
+        <div class="subpanel">
+          <span class="field-label">Commonly-exposed paths</span>
+          <div class="results-wrap">
+            <table class="results" id="scan-paths-table">
+              <thead><tr><th>Path</th><th>What it is</th><th>Result</th><th>Severity</th></tr></thead>
+              <tbody id="scan-paths-tbody"><tr><td colspan="4" class="hint">—</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
   </main>
 
   <div class="footer-note">RUNS ENTIRELY CLIENT-SIDE · NOTHING IS SENT ANYWHERE EXCEPT REQUESTS YOU EXPLICITLY FIRE · v1.0</div>
@@ -659,6 +710,7 @@ const TOOLS = [
   { id:'comparer', glyph:'⇅', label:'Comparer' },
   { id:'history', glyph:'◷', label:'History' },
   { id:'recon', glyph:'◎', label:'Recon' },
+  { id:'scan', glyph:'⛨', label:'Vuln Scan' },
 ];
 const tabbar = document.getElementById('tabbar');
 TOOLS.forEach(t=>{
@@ -1306,6 +1358,161 @@ async function runRecon(){
 document.getElementById('recon-run').addEventListener('click', runRecon);
 document.getElementById('recon-target').addEventListener('keydown', (e)=>{ if(e.key==='Enter') runRecon(); });
 document.getElementById('recon-target').value = 'example.com';
+
+/* ------------------------------------------------------------------ *
+ * VULN SCAN
+ * ------------------------------------------------------------------ */
+
+// Browsers only expose a small safelisted set of response headers to
+// cross-origin JS (Cache-Control, Content-Type, etc.) — none of the
+// security headers below are in it. A fetch can only ever PROVE a header
+// is present (if the target opted in via Access-Control-Expose-Headers,
+// or happens to be same-origin); it can never prove one is absent, so
+// these checks report "present" or "unknown", never a false "missing".
+const SECURITY_HEADER_CHECKS = [
+  { header:'strict-transport-security', label:'Strict-Transport-Security (HSTS)',
+    note:'If actually missing: a plain-HTTP link or a user\'s first visit can be intercepted before the redirect to HTTPS ever happens.' },
+  { header:'content-security-policy', label:'Content-Security-Policy', altCsp:'frame-ancestors',
+    note:'If actually missing: one missed output-encoding bug becomes a full XSS with no second line of defense.' },
+  { header:'x-frame-options', label:'X-Frame-Options / frame-ancestors',
+    note:'If actually missing from both: the page can be framed by another site for clickjacking.' },
+  { header:'x-content-type-options', label:'X-Content-Type-Options',
+    note:'If actually missing: some browsers may MIME-sniff a response into a more dangerous content type.' },
+  { header:'referrer-policy', label:'Referrer-Policy',
+    note:'If actually missing: full URLs (including sensitive query params) may leak to third parties via Referer.' },
+  { header:'permissions-policy', label:'Permissions-Policy',
+    note:'If actually missing: no explicit restriction on powerful browser features (camera, geolocation, etc.).' },
+];
+
+const INFO_HEADER_CHECKS = [
+  { header:'server', label:'Server' },
+  { header:'x-powered-by', label:'X-Powered-By' },
+];
+
+function findMetaCsp(html){
+  const m = /<meta\s+[^>]*http-equiv=["']content-security-policy["'][^>]*content=["']([^"']+)["']/i.exec(html || '');
+  return m ? m[1] : null;
+}
+
+const PATH_CHECKS = [
+  { path:'/.env', label:'Environment file', severity:'high' },
+  { path:'/.git/HEAD', label:'Git repository exposed', severity:'high' },
+  { path:'/.git/config', label:'Git repository exposed', severity:'high' },
+  { path:'/wp-config.php.bak', label:'WordPress config backup', severity:'high' },
+  { path:'/id_rsa', label:'Private SSH key', severity:'high' },
+  { path:'/backup.zip', label:'Backup archive', severity:'medium' },
+  { path:'/config.php.bak', label:'Config backup file', severity:'medium' },
+  { path:'/phpinfo.php', label:'phpinfo() disclosure', severity:'medium' },
+  { path:'/server-status', label:'Apache server-status', severity:'medium' },
+  { path:'/.htaccess', label:'.htaccess exposed', severity:'medium' },
+  { path:'/.DS_Store', label:'.DS_Store exposed', severity:'low' },
+  { path:'/.well-known/security.txt', label:'security.txt (good practice)', severity:'info' },
+];
+
+async function runVulnScan(){
+  const raw = document.getElementById('scan-target').value.trim();
+  if(!raw) return;
+  const url = /^https?:\/\//i.test(raw) ? raw : 'https://' + raw;
+  let origin;
+  try{ origin = new URL(url).origin; }
+  catch(e){
+    document.getElementById('scan-summary').innerHTML = '<span class="hint">That doesn\'t look like a valid URL.</span>';
+    return;
+  }
+
+  document.getElementById('scan-summary').innerHTML = '<span class="hint">Scanning…</span>';
+  document.getElementById('scan-headers-tbody').innerHTML = '<tr><td colspan="3" class="hint">Loading…</td></tr>';
+  document.getElementById('scan-cors').innerHTML = '<span class="hint">Loading…</span>';
+  document.getElementById('scan-paths-tbody').innerHTML = '<tr><td colspan="4" class="hint">Checking…</td></tr>';
+
+  const findings = [];
+
+  let mainRes = null, mainErr = null, bodyText = '';
+  try{
+    mainRes = await fetch(url, { mode:'cors', signal: AbortSignal.timeout(8000) });
+    bodyText = await mainRes.text();
+  }catch(e){ mainErr = (e && e.message) || String(e); }
+
+  if(!mainRes){
+    document.getElementById('scan-headers-tbody').innerHTML = '<tr><td colspan="3" class="hint">Couldn\'t reach the target: '+escapeHtml(mainErr||'unknown error')+' — likely CORS or a network/DNS error.</td></tr>';
+    document.getElementById('scan-cors').innerHTML = '<span class="hint">No response to inspect.</span>';
+  } else {
+    const h = mainRes.headers;
+    const metaCsp = findMetaCsp(bodyText);
+    const rows = SECURITY_HEADER_CHECKS.map(chk=>{
+      const raw = h.get(chk.header);
+      const present = !!raw || (chk.header==='content-security-policy' && !!metaCsp)
+        || (chk.altCsp && !!h.get('content-security-policy') && h.get('content-security-policy').indexOf(chk.altCsp)!==-1);
+      return { label: chk.label, present, note: chk.note, value: raw || (chk.header==='content-security-policy' ? metaCsp : null) };
+    });
+    document.getElementById('scan-headers-tbody').innerHTML = rows.map(r=>{
+      const dot = r.present ? 'dot-ok' : 'dot-caution';
+      const sevCell = r.present ? '<span class="sev-badge sev-info">VERIFIED</span>' : '<span class="sev-badge sev-info">UNKNOWN</span>';
+      const status = r.present ? 'Present' : 'Not readable cross-origin';
+      return '<tr><td>'+escapeHtml(r.label)+'<div class="hint">'+escapeHtml(r.note)+'</div></td>'+
+        '<td><span class="status-dot '+dot+'"></span>'+status+'</td>'+
+        '<td>'+sevCell+'</td></tr>';
+    }).join('');
+    document.getElementById('scan-headers-tbody').innerHTML +=
+      '<tr><td colspan="3" class="hint">Browsers only expose a small safelist of response headers to cross-origin JS — "Not readable cross-origin" means unproven either way, not confirmed missing. For ground truth: <code>curl -sD - -o /dev/null '+escapeHtml(url)+'</code></td></tr>';
+
+    const banners = INFO_HEADER_CHECKS.map(c=>{ const v = h.get(c.header); return v ? (c.label+': '+v) : null; }).filter(Boolean);
+    if(banners.length){
+      document.getElementById('scan-headers-tbody').innerHTML += '<tr><td colspan="3" class="hint">'+escapeHtml(banners.join(' · '))+' — banner headers disclose software/version info, worth trimming.</td></tr>';
+    }
+
+    const acao = h.get('access-control-allow-origin');
+    const acac = h.get('access-control-allow-credentials');
+    if(!acao){
+      document.getElementById('scan-cors').innerHTML = '<span class="hint">Access-Control-Allow-Origin isn\'t readable cross-origin either (same restriction as above) — check with <code>curl -sD - -o /dev/null '+escapeHtml(url)+'</code>.</span>';
+    } else if(acao === '*'){
+      document.getElementById('scan-cors').innerHTML =
+        '<div class="whois-row"><span class="whois-label">Access-Control-Allow-Origin</span><span class="whois-value mono">*</span></div>'+
+        '<p class="hint" style="margin-top:6px;">Open to any origin — fine for a public, unauthenticated API; worth a second look if this endpoint ever returns anything sensitive.</p>';
+    } else {
+      const flagged = acac === 'true';
+      document.getElementById('scan-cors').innerHTML =
+        '<div class="whois-row"><span class="whois-label">Access-Control-Allow-Origin</span><span class="whois-value mono">'+escapeHtml(acao)+'</span></div>'+
+        '<div class="whois-row"><span class="whois-label">Access-Control-Allow-Credentials</span><span class="whois-value mono">'+escapeHtml(acac||'(not set)')+'</span></div>'+
+        (flagged ? '<p class="hint" style="margin-top:6px;color:var(--restricted);">Reflects a specific origin <strong>and</strong> allows credentials — if it reflects any Origin unconditionally (test by re-requesting from a different origin), that lets any site read authenticated responses cross-origin.</p>' : '');
+      if(flagged) findings.push({ severity:'high', label:'CORS reflects an origin with credentials allowed' });
+    }
+  }
+
+  const pathResults = await Promise.all(PATH_CHECKS.map(async pc=>{
+    try{
+      const res = await fetch(origin + pc.path, { mode:'cors', signal: AbortSignal.timeout(5000) });
+      return Object.assign({}, pc, { status: res.status });
+    }catch(e){ return Object.assign({}, pc, { status: null }); }
+  }));
+  const checkedCount = pathResults.filter(r=>r.status !== null).length;
+  const flaggedPaths = pathResults.filter(r=>r.status === 200 || r.status === 401 || r.status === 403);
+  if(checkedCount === 0){
+    document.getElementById('scan-paths-tbody').innerHTML = '<tr><td colspan="4" class="hint">All path checks were blocked (CORS or network) — this check needs the target to allow cross-origin reads, same as Repeater.</td></tr>';
+  } else if(flaggedPaths.length === 0){
+    document.getElementById('scan-paths-tbody').innerHTML = '<tr><td colspan="4" class="hint">None of the checked paths responded with 200/401/403.</td></tr>';
+  } else {
+    document.getElementById('scan-paths-tbody').innerHTML = flaggedPaths.map(r=>{
+      const isOpen = r.status === 200;
+      const sev = isOpen ? r.severity : 'info';
+      if(isOpen && r.severity !== 'info') findings.push({ severity:r.severity, label:r.label+' exposed at '+r.path });
+      const resultText = isOpen ? ('Present (HTTP '+r.status+')') : ('Exists, access restricted (HTTP '+r.status+')');
+      return '<tr><td class="mono">'+escapeHtml(r.path)+'</td><td>'+escapeHtml(r.label)+'</td><td>'+escapeHtml(resultText)+'</td><td><span class="sev-badge sev-'+sev+'">'+sev.toUpperCase()+'</span></td></tr>';
+    }).join('');
+  }
+
+  const counts = { high:0, medium:0, low:0 };
+  findings.forEach(f=>{ if(counts[f.severity] !== undefined) counts[f.severity]++; });
+  document.getElementById('scan-summary').innerHTML =
+    '<span class="sev-badge sev-high">'+counts.high+' high</span>'+
+    '<span class="sev-badge sev-medium">'+counts.medium+' medium</span>'+
+    '<span class="sev-badge sev-low">'+counts.low+' low</span>'+
+    (findings.length===0 ? '<span class="hint">No findings from the checks above.</span>' : '');
+}
+
+document.getElementById('scan-run').addEventListener('click', runVulnScan);
+document.getElementById('scan-target').addEventListener('keydown', (e)=>{ if(e.key==='Enter') runVulnScan(); });
+document.getElementById('scan-target').value = 'https://example.com';
 
 })();
 </script>

@@ -3,9 +3,12 @@ source "https://rubygems.org"
 ruby "3.3.6"
 
 gem "bootsnap", require: false
+gem "json", ">= 2.21.2", "< 3" # fixes CVE-2026-71847; pinned below 3.x, which broke JSON.parse elsewhere
+gem "loofah", ">= 2.25.2" # fixes GHSA-5qhf-9phg-95m2 / GHSA-8whx-365g-h9vv / CVE-2026-73490 (javascript: URI sanitizer bypasses)
 gem "pg", "~> 1.5"
 gem "puma", "~> 8.0" # >= 8.0.2 fixes CVE-2026-47736 / CVE-2026-47737 (PROXY protocol memory exhaustion)
-gem "rails", "~> 8.0"
+gem "rails", ">= 8.1.3.1", "< 8.2" # >= 8.1.3.1 fixes CVE-2026-66066 (Active Storage variant processing file read/RCE)
+gem "rails-html-sanitizer", ">= 1.7.1" # fixes CVE-2026-73648 (possible XSS with certain sanitizer configurations)
 
 # Auth
 gem "devise", "~> 5.0" # >= 5.0.4 fixes CVE-2026-32700 (email-confirm race) / CVE-2026-40295 (open redirect)

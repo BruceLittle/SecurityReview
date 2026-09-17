@@ -23,10 +23,6 @@
     --unknown-soft:#E7E9EC;
     --restricted:#A73B33;
     --restricted-soft:#F7DEDB;
-    --hawk-head:#D97C33;
-    --hawk-beak:#8A4A1E;
-    --hawk-eye:#1A1006;
-    --hawk-glint:#FFE8CF;
     --shadow: 0 1px 2px rgba(18,25,36,0.06), 0 8px 24px -12px rgba(18,25,36,0.18);
     --radius: 14px;
     color-scheme: light;
@@ -53,10 +49,6 @@
       --unknown-soft:#1E2530;
       --restricted:#E38078;
       --restricted-soft:#3A1917;
-      --hawk-head:#E8944D;
-      --hawk-beak:#C97A3E;
-      --hawk-eye:#120A04;
-      --hawk-glint:#FFF2E0;
       --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 12px 28px -14px rgba(0,0,0,0.6);
     }
   }
@@ -81,10 +73,6 @@
     --unknown-soft:#1E2530;
     --restricted:#E38078;
     --restricted-soft:#3A1917;
-    --hawk-head:#E8944D;
-    --hawk-beak:#C97A3E;
-    --hawk-eye:#120A04;
-    --hawk-glint:#FFF2E0;
     --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 12px 28px -14px rgba(0,0,0,0.6);
   }
 
@@ -285,12 +273,11 @@
     <span class="eyebrow"><span class="dot"></span>Zeitview · Security Tooling</span>
     <div class="title-row">
       <svg class="hawk-icon" viewBox="0 0 120 100" role="img" aria-label="ZeitHawk icon">
-        <ellipse cx="36" cy="46" rx="32" ry="30" fill="var(--hawk-head)"/>
-        <polygon points="52,16 120,36 54,60" fill="var(--hawk-head)"/>
-        <polygon points="106,28 120,36 96,54" fill="var(--hawk-beak)"/>
-        <polygon points="18,20 48,14 36,30" fill="var(--hawk-beak)"/>
-        <circle cx="34" cy="33" r="6" fill="var(--hawk-eye)"/>
-        <circle cx="32" cy="31" r="1.9" fill="var(--hawk-glint)"/>
+        <ellipse cx="34" cy="44" rx="30" ry="28" fill="var(--accent)"/>
+        <polygon points="54,18 118,38 56,58" fill="var(--accent)"/>
+        <polygon points="58,35 98,36.5 96,41 56,40" fill="var(--paper)"/>
+        <path d="M 26,16 Q 40,10 52,18" stroke="var(--paper)" stroke-width="4" fill="none" stroke-linecap="round"/>
+        <circle cx="42" cy="30" r="5.5" fill="var(--paper)"/>
       </svg>
       <h1 class="title">ZeitHawk</h1>
     </div>
